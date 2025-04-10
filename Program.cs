@@ -31,7 +31,7 @@ internal static class Program
 		if (TriggersResponsesDict == null)
 		{
 			Console.WriteLine("triggers.json not found, or some other error occured. creating a new one.");
-			
+
 			TriggersResponsesDict = new Dictionary<string, string>();
 			TriggersResponsesDict.Add("test", "test content");
 			TriggersResponsesDict.Add("test2", "test2 content");
@@ -39,20 +39,27 @@ internal static class Program
 		}
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
-		if(string.IsNullOrEmpty(token))
+		if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
 			return;
 		}
-		
-		Client = new DiscordSocketClient();
 
-		Client.Log += Log;
+		var config = new DiscordSocketConfig
+		{
+			GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+		};
+		Client = new DiscordSocketClient(config);
+		Client.Log += message => {
+			Console.WriteLine(message.Message);
+			return Task.CompletedTask;
+		};
 		Client.Ready += Client_Ready;
 		
 		Client.MessageReceived += MessageReceived;
-		Client.ModalSubmitted += ModalSubmitted;
+		
 		Client.SlashCommandExecuted += SlashCommandHandler;
+		Client.ModalSubmitted += ModalSubmitted;
 
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
@@ -63,8 +70,8 @@ internal static class Program
 			switch (Console.ReadLine())
 			{
 				case "ex":
-					await Client.LogoutAsync();
 					await Client.StopAsync();
+					await Client.LogoutAsync();
 					
 					running = false;
 					break;
@@ -75,7 +82,7 @@ internal static class Program
 		}
 	}
 
-	public static async Task Client_Ready()
+	private static async Task Client_Ready()
 	{
 		await LoadCommands();
 		Console.WriteLine("Client is ready.");
@@ -95,12 +102,6 @@ internal static class Program
 		{
 			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k]);
 		}
-	}
-	
-	public static Task Log(LogMessage msg)
-	{
-		Console.WriteLine(msg);
-		return Task.CompletedTask;
 	}
 
 	internal static Task<string> AddTriggerAndResponse(string trigger, string response) 
