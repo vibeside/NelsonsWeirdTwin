@@ -76,22 +76,20 @@ namespace NelsonsWeirdTwin
             return Task.CompletedTask;
         }
 
-        //static async ValueTask MessageReceived(Message msg)
-        //{
+        static async ValueTask MessageReceived(SocketMessage msg)
+        {
+            var message = msg as SocketUserMessage;
+            if (message == null) return;
+            if (msg.Author.IsBot) return;
+            foreach (string k in triggerWordsAndResponses.Keys)
+            {
+                if (msg.Content.Contains(k))
+                {
+                }
+            }
+            return;
 
-        //    if (msg.Author.Id == client.Id) return;
-        //    if (msg.Author.IsBot) return;
-        //    if (msg.Author.IsSystemUser == true) return;
-        //    foreach (string k in triggerWordsAndResponses.Keys)
-        //    {
-        //        if (msg.Content.Contains(k))
-        //        {
-        //            await client.Rest.SendMessageAsync(msg.ChannelId, triggerWordsAndResponses[k]);
-        //        }
-        //    }
-        //    return;
-
-        //}
+        }
         static Task<string> AddTriggerAndResponse(string trigger, string response) 
         {
             string replaced = response.Replace("\\\\","\\");
