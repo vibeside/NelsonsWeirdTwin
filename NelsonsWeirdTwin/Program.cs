@@ -22,7 +22,7 @@ namespace NelsonsWeirdTwin
 
         static async Task Main()
         {
-            DotNetEnv.Env.Load();
+            DotNetEnv.Env.Load("token.env");
             botToken = Environment.GetEnvironmentVariable("TOKEN");
             triggerWordsAndResponses = JsonConvert.DeserializeObject<Dictionary<string, string>>(File.ReadAllText("triggers.json"));
             
