@@ -19,22 +19,7 @@ internal static class Program
 	private static async Task Main()
 	{
 		Env.Load();
-		try
-		{
-			TriggersResponsesDict =
-				JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
-		}
-		catch (Exception e)
-		{
-			Console.WriteLine($"triggers.json not found, or some other error occured. creating a new one. ({e.GetType().Name})");
-
-			//TriggersResponsesDict = new Dictionary<string, string>();
-			//TriggersResponsesDict.Add("test", "test content");
-			//TriggersResponsesDict.Add("test2", "test2 content");
-			//await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
-			Console.ReadLine(); // wait for response
-			return;
-		}
+		TryLoadTriggers();
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
 		if (string.IsNullOrEmpty(token))
@@ -53,7 +38,7 @@ internal static class Program
 			Console.WriteLine(message.Message);
 			return Task.CompletedTask;
 		};
-		Client.Ready += Client_Ready;
+		Client.Ready += OnReady;
 		
 		Client.MessageReceived += MessageReceived;
 		
@@ -76,13 +61,14 @@ internal static class Program
 					//break;
 					return;
 				case "u":
-					TriggersResponsesDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
+					TryLoadTriggers();
 					break;
 			}
 		}
 	}
 
-	private static async Task Client_Ready()
+	#region Events
+	private static async Task OnReady()
 	{
 		await LoadCommands();
 		Console.WriteLine("Client is ready.");
@@ -104,26 +90,68 @@ internal static class Program
 			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k]);
 		}
 	}
+	
+	private static async Task SlashCommandHandler(SocketSlashCommand command)
+	{
+		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
+		var commandName = command.Data.Name;
+		
+		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
+		{
+			await cmd.OnExecuted(Client, command);
+			return;
+		}
+		
+		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
+	}
+	
+	private static async Task ModalSubmitted(SocketModal modal)
+	{
+		if (modal.User is { IsBot: true } or { IsWebhook: true }) return;
+		
+		foreach (var cmd in CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
+		{
+			await cmd.OnModalSubmitted(Client, modal);
+			return;
+		}
+		
+		await modal.RespondAsync($"Modal \"{modal.Data.CustomId}\" not found!!!!");
+	}
+	#endregion
 
 	internal static Task<string> AddTriggerAndResponse(string trigger, string response) 
 	{
-		//var fixedResponse = response
-		//	.Replace(@"\\","\\")
-		//	.Replace("\\n","\n");
-
-		var fixedResponse = response
-			.Replace(@"\\\\n", "\n");
-		// to try
-		TriggersResponsesDict.Add(trigger, fixedResponse);
+		TriggersResponsesDict.Add(trigger, response);
 		SaveTriggers();
 		
 		return Task.FromResult($"Trigger \"{trigger}\" was added.");
 	}
-	
-	internal static Task SaveTriggers()
+
+	internal static async Task TryLoadTriggers()
 	{
-		File.WriteAllText("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
-		return Task.CompletedTask;
+		try
+		{
+			TriggersResponsesDict =
+				JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
+		} catch (FileNotFoundException)
+		{
+			Console.WriteLine("Triggers file not found. Creating a new one.");
+			await SaveTriggers();
+		}
+		catch (JsonException)
+		{
+			Console.WriteLine("Triggers file is corrupted. Creating a new one.");
+			await SaveTriggers();
+		}
+		catch (Exception e)
+		{
+			Console.WriteLine($"An error occurred while loading triggers: {e.Message}");
+		}
+	}
+	
+	internal static async Task SaveTriggers()
+	{
+		await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
 	}
 	
 	private static async Task LoadCommands()
@@ -158,32 +186,5 @@ internal static class Program
 			var guild = Client.GetGuild(1349221936470687764);
 			await command.RegisterCommand(Client, guild);
 		}
-	}
-
-	private static async Task SlashCommandHandler(SocketSlashCommand command)
-	{
-		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
-		var commandName = command.Data.Name;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
-		{
-			await cmd.OnExecuted(Client, command);
-			return;
-		}
-		
-		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
-	}
-	
-	private static async Task ModalSubmitted(SocketModal modal)
-	{
-		if (modal.User is { IsBot: true } or { IsWebhook: true }) return;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
-		{
-			await cmd.OnModalSubmitted(Client, modal);
-			return;
-		}
-		
-		await modal.RespondAsync($"Modal \"{modal.Data.CustomId}\" not found!!!!");
 	}
 }

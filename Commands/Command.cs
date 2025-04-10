@@ -3,7 +3,7 @@ using Discord.WebSocket;
 
 namespace NelsonsWeirdTwin.Commands;
 
-abstract class Command
+internal abstract class Command
 {
 	internal virtual SlashCommandProperties CommandProperties { get; set; }
 	internal virtual string[] ModalIDs { get; set; } = [];
