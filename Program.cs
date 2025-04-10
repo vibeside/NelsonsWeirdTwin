@@ -4,6 +4,7 @@ using DotNetEnv;
 using Newtonsoft.Json;
 using System.Reflection;
 using NelsonsWeirdTwin.Commands;
+using System.ComponentModel;
 
 namespace NelsonsWeirdTwin;
 
@@ -27,16 +28,19 @@ internal static class Program
 		{
 			Console.WriteLine($"triggers.json not found, or some other error occured. creating a new one. ({e.GetType().Name})");
 
-			TriggersResponsesDict = new Dictionary<string, string>();
-			TriggersResponsesDict.Add("test", "test content");
-			TriggersResponsesDict.Add("test2", "test2 content");
-			await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
+			//TriggersResponsesDict = new Dictionary<string, string>();
+			//TriggersResponsesDict.Add("test", "test content");
+			//TriggersResponsesDict.Add("test2", "test2 content");
+			//await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
+			Console.ReadLine(); // wait for response
+			return;
 		}
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
 		if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
+			Console.ReadLine(); // wait for response from me to close
 			return;
 		}
 
@@ -58,18 +62,19 @@ internal static class Program
 
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
-		
-		var running = true;
-		while (running)
+
+		//var running = true;
+		while (true)
 		{
 			switch (Console.ReadLine())
 			{
 				case "ex":
 					await Client.StopAsync();
 					await Client.LogoutAsync();
-					
-					running = false;
-					break;
+
+					//running = false;
+					//break;
+					return;
 				case "u":
 					TriggersResponsesDict = JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
 					break;
@@ -87,11 +92,12 @@ internal static class Program
 	{
 		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
-			Console.WriteLine(msg.Type);
-			Console.WriteLine(msg.Author.IsBot);
-			Console.WriteLine(msg.Author.IsWebhook);
+			//Console.WriteLine(msg.Type);
+			//Console.WriteLine(msg.Author.IsBot);
+			//Console.WriteLine(msg.Author.IsWebhook);
+			// debugging stuff...
 			return;
-		};
+		}
 		
 		foreach (var k in TriggersResponsesDict.Keys.Where(k => msg.Content.Contains(k)))
 		{
@@ -101,10 +107,13 @@ internal static class Program
 
 	internal static Task<string> AddTriggerAndResponse(string trigger, string response) 
 	{
+		//var fixedResponse = response
+		//	.Replace(@"\\","\\")
+		//	.Replace("\\n","\n");
+
 		var fixedResponse = response
-			.Replace(@"\\","\\")
-			.Replace("\\n","\n");
-		
+			.Replace(@"\\\\n", "\n");
+		// to try
 		TriggersResponsesDict.Add(trigger, fixedResponse);
 		SaveTriggers();
 		
@@ -146,7 +155,7 @@ internal static class Program
 		
 		foreach (var command in CommandsList)
 		{
-			var guild = Client.GetGuild(1349221936470687764) ?? Client.GetGuild(1359858871270637762);
+			var guild = Client.GetGuild(1349221936470687764);
 			await command.RegisterCommand(Client, guild);
 		}
 	}
