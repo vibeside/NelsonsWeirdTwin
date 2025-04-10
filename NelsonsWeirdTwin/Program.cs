@@ -85,6 +85,7 @@ namespace NelsonsWeirdTwin
             {
                 if (msg.Content.Contains(k))
                 {
+                    await msg.Channel.SendMessageAsync(triggerWordsAndResponses[k]);
                 }
             }
             return;
