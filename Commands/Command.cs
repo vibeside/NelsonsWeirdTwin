@@ -13,7 +13,10 @@ abstract class Command
 		if (guild != null)
 			await guild.CreateApplicationCommandAsync(CommandProperties);
 		else
+		{
+			Console.WriteLine("WARNING: Registering global commands because a guild was not provided.");
 			await client.CreateGlobalApplicationCommandAsync(CommandProperties);
+		}
 		
 		Console.WriteLine($"Registered \"{CommandProperties.Name}\".");
 	}

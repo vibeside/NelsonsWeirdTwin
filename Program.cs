@@ -23,14 +23,9 @@ internal static class Program
 			TriggersResponsesDict =
 				JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
 		}
-		catch (Exception)
+		catch (Exception e)
 		{
-			// ignored
-		}
-
-		if (TriggersResponsesDict == null)
-		{
-			Console.WriteLine("triggers.json not found, or some other error occured. creating a new one.");
+			Console.WriteLine($"triggers.json not found, or some other error occured. creating a new one. ({e.GetType().Name})");
 
 			TriggersResponsesDict = new Dictionary<string, string>();
 			TriggersResponsesDict.Add("test", "test content");
@@ -151,7 +146,8 @@ internal static class Program
 		
 		foreach (var command in CommandsList)
 		{
-			await command.RegisterCommand(Client, Client.GetGuild(1359858871270637762));
+			var guild = Client.GetGuild(1349221936470687764) ?? Client.GetGuild(1359858871270637762);
+			await command.RegisterCommand(Client, guild);
 		}
 	}
 
