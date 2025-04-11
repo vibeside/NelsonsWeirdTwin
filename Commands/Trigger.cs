@@ -57,7 +57,7 @@ internal class TriggerCommands: Command
 			case "edit": // /trigger edit
 				await HandleEdit(context);
 				break;
-			case "remove": // /trigger remove
+			case "remove": // /trigger remove 
 				await HandleRemove(context);
 				break;
 		}
@@ -114,7 +114,7 @@ internal class TriggerCommands: Command
 				
 				await Program.AddTriggerAndResponse(triggerName, content); // ...add the trigger and response to the dictionary...
 				
-				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```"); // ...and respond with the trigger and content.
+				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```", ephemeral:true); // ...and respond with the trigger and content.
 				break;
 		}
 	}
