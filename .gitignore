@@ -12,7 +12,7 @@
 .idea/
 
 # Protected
-.env
+*.env
 
 # Other
 triggers.json

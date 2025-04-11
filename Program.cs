@@ -1,10 +1,14 @@
-﻿using Discord;
+﻿using System;
+using System.Collections.Generic;
+using Discord;
 using Discord.WebSocket;
 using DotNetEnv;
 using Newtonsoft.Json;
 using System.Reflection;
 using NelsonsWeirdTwin.Commands;
-using System.ComponentModel;
+using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin;
 
