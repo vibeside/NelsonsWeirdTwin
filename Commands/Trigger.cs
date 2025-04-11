@@ -202,6 +202,7 @@ internal class TriggerCommands: Command
 			return;
 		}
 		
+		await Program.SaveTriggers(); // ...save the changes...
 		await context.RespondAsync($"Removed trigger with name `{triggerName}`."); // ...and respond with a status update.
 	}
 
