@@ -110,6 +110,9 @@ internal class TriggerCommands: Command
 					await modal.RespondAsync("Trigger content cannot be empty.", ephemeral: true);
 					return;
 				}
+				
+				triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+				
 				if (Program.TriggersResponsesDict.ContainsKey(triggerName)) // ...check if the trigger already exists...
 				{
 					await modal.RespondAsync($"Trigger with the name `{triggerName}` already exists.", ephemeral: true);
@@ -117,7 +120,6 @@ internal class TriggerCommands: Command
 				}
 				
 				await Program.AddTriggerAndResponse(triggerName, content); // ...add the trigger and response to the dictionary...
-				
 				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```", ephemeral: true); // ...and respond with the trigger and content.
 				break;
 		}
@@ -136,6 +138,8 @@ internal class TriggerCommands: Command
 					await command.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
 					return;
 				}
+				
+				triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
 				
 				if (!Program.TriggersResponsesDict.TryGetValue(triggerName, out var currentContent)) // ...check if the trigger exists...
 				{
@@ -172,6 +176,8 @@ internal class TriggerCommands: Command
 					return;
 				}
 				
+				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+				
 				if (!Program.TriggersResponsesDict.ContainsKey(id)) // ...check if the trigger exists...
 				{
 					await modal.RespondAsync($"Trigger with the name `{id}` does not exist.", ephemeral: true);
@@ -195,6 +201,8 @@ internal class TriggerCommands: Command
 			await context.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
 			return;
 		}
+
+		triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
 		
 		if (!Program.TriggersResponsesDict.Remove(triggerName, out _)) // ...check if the trigger exists and remove it...
 		{
@@ -225,7 +233,7 @@ internal class TriggerCommands: Command
 		}
 		
 		var options = Program.TriggersResponsesDict.Keys
-			.Where(k => k.Contains(currentValue, StringComparison.OrdinalIgnoreCase))
+			.Where(k => k.Contains(currentValue, StringComparison.CurrentCultureIgnoreCase))
 			.Select(k => new AutocompleteResult(k, k))
 			.Take(25)
 			.ToList();

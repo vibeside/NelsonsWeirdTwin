@@ -90,9 +90,10 @@ internal static class Program
 			return;
 		}
 		
-		foreach (var k in TriggersResponsesDict.Keys.Where(k => msg.Content.Contains(k)))
+		foreach (var k in TriggersResponsesDict.Keys.Where(k => msg.Content.Contains(k, StringComparison.CurrentCultureIgnoreCase)))
 		{
 			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k], allowedMentions: AllowedMentions.None);
+			return; // only respond to the first trigger found
 		}
 	}
 	
