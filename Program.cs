@@ -19,7 +19,7 @@ internal static class Program
 	private static async Task Main()
 	{
 		Env.Load();
-		TryLoadTriggers();
+		await TryLoadTriggers();
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
 		if (string.IsNullOrEmpty(token))
@@ -61,7 +61,7 @@ internal static class Program
 					//break;
 					return;
 				case "u":
-					TryLoadTriggers();
+					await TryLoadTriggers();
 					break;
 			}
 		}
@@ -76,6 +76,10 @@ internal static class Program
 
 	private static async Task MessageReceived(SocketMessage msg)
 	{
+		if(msg.Channel.Id == 1357125993717825667)
+		{
+			if(msg.Attachments.Count == 0) await msg.DeleteAsync();
+		}
 		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
 			//Console.WriteLine(msg.Type);
