@@ -28,7 +28,7 @@ internal static class Program
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
 
-        if (string.IsNullOrEmpty(token))
+		if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
 			Console.ReadLine(); // wait for response from me to close
@@ -41,15 +41,16 @@ internal static class Program
 		};
 		Client = new DiscordSocketClient(config);
 
-		
-		Client.Log += message => {
+
+		Client.Log += message =>
+		{
 			Console.WriteLine(message.Message);
 			return Task.CompletedTask;
 		};
 		Client.Ready += OnReady;
-		
+
 		Client.MessageReceived += MessageReceived;
-		
+
 		Client.SlashCommandExecuted += SlashCommandHandler;
 		Client.AutocompleteExecuted += AutoCompleteHandler;
 		Client.ModalSubmitted += ModalSubmitted;
