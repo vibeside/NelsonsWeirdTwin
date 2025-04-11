@@ -18,7 +18,7 @@ internal static class Program
 
 	private static async Task Main()
 	{
-		Env.Load();
+		Env.Load("token.env");
 		await TryLoadTriggers();
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
