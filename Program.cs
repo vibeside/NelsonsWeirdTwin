@@ -92,7 +92,7 @@ internal static class Program
 		
 		foreach (var k in TriggersResponsesDict.Keys.Where(k => msg.Content.Contains(k)))
 		{
-			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k]);
+			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k], allowedMentions: AllowedMentions.None);
 		}
 	}
 	
