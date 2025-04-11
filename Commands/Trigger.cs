@@ -42,6 +42,7 @@ internal class TriggerCommands: Command
 							.WithDescription("The name of the trigger to remove.")
 							.WithType(ApplicationCommandOptionType.String)
 							.WithRequired(true)
+							.WithAutocomplete(true)
 					)
 			)
 			.WithDescription("Triggers are effectively tags.")
