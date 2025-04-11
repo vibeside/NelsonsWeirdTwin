@@ -1,3 +1,4 @@
+using System;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -27,6 +28,7 @@ internal class TriggerCommands: Command
 							.WithDescription("The name of the trigger to edit.")
 							.WithType(ApplicationCommandOptionType.String)
 							.WithRequired(true)
+							.WithAutocomplete(true)
 					)
 			)
 			.AddOption(
@@ -200,5 +202,31 @@ internal class TriggerCommands: Command
 		}
 		
 		await context.RespondAsync($"Removed trigger with name `{triggerName}`."); // ...and respond with a status update.
+	}
+
+	internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
+	{
+		if (context.Data.Current.Name != "name")
+		{
+			await context.RespondAsync([]);
+			return;
+		}
+		
+		var currentValue = context.Data.Current.Value.ToString();
+		if(string.IsNullOrEmpty(currentValue))
+		{
+			await context.RespondAsync(Program.TriggersResponsesDict.Keys
+				.Select(k => new AutocompleteResult(k, k))
+				.Take(25)
+				.ToList());
+			return;
+		}
+		
+		var options = Program.TriggersResponsesDict.Keys
+			.Where(k => k.Contains(currentValue, StringComparison.OrdinalIgnoreCase))
+			.Select(k => new AutocompleteResult(k, k))
+			.Take(25)
+			.ToList();
+		await context.RespondAsync(options);
 	}
 }

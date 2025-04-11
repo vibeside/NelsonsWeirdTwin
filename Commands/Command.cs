@@ -32,4 +32,9 @@ internal abstract class Command
 	{
 		await context.RespondAsync("Not implemented."); // This is called when a modal was submit, but OnModalSubmitted wasn't overridden.
 	}
+	
+	internal virtual async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
+	{
+		await context.RespondAsync("Not implemented."); // This is called when an autocomplete was requested, but OnAutocompleteResultsRequested wasn't overridden.
+	}
 }

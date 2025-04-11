@@ -47,6 +47,7 @@ internal static class Program
 		Client.MessageReceived += MessageReceived;
 		
 		Client.SlashCommandExecuted += SlashCommandHandler;
+		Client.AutocompleteExecuted += AutoCompleteHandler;
 		Client.ModalSubmitted += ModalSubmitted;
 
 		await Client.LoginAsync(TokenType.Bot, token);
@@ -65,7 +66,7 @@ internal static class Program
 					//break;
 					return;
 				case "u":
-					TryLoadTriggers();
+					await TryLoadTriggers();
 					break;
 			}
 		}
@@ -108,6 +109,18 @@ internal static class Program
 		
 		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
 	}
+
+	private static async Task AutoCompleteHandler(SocketAutocompleteInteraction context)
+	{
+		if(context.User is { IsBot: true } or { IsWebhook: true }) return;
+		var commandName = context.Data.CommandName;
+		
+		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
+		{
+			await cmd.OnAutocompleteResultsRequested(Client, context);
+			return;
+		}
+	}
 	
 	private static async Task ModalSubmitted(SocketModal modal)
 	{
@@ -123,12 +136,12 @@ internal static class Program
 	}
 	#endregion
 
-	internal static Task<string> AddTriggerAndResponse(string trigger, string response) 
+	internal static async Task<string> AddTriggerAndResponse(string trigger, string response) 
 	{
 		TriggersResponsesDict.Add(trigger, response);
-		SaveTriggers();
+		await SaveTriggers();
 		
-		return Task.FromResult($"Trigger \"{trigger}\" was added.");
+		return $"Trigger \"{trigger}\" was added.";
 	}
 
 	internal static async Task TryLoadTriggers()
