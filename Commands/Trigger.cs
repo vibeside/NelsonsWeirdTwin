@@ -118,7 +118,7 @@ internal class TriggerCommands: Command
 				
 				await Program.AddTriggerAndResponse(triggerName, content); // ...add the trigger and response to the dictionary...
 				
-				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```", ephemeral:true); // ...and respond with the trigger and content.
+				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```", ephemeral: true); // ...and respond with the trigger and content.
 				break;
 		}
 	}
@@ -181,7 +181,7 @@ internal class TriggerCommands: Command
 				Program.TriggersResponsesDict[id] = content; // ...update the trigger and response in the dictionary...
 				await Program.SaveTriggers(); // ...save the changes...
 				
-				await modal.RespondAsync($"Trigger with the name `{id}` was updated to:\n```\n{content}\n```"); // ...and respond with the new content.
+				await modal.RespondAsync($"Trigger with the name `{id}` was updated to:\n```\n{content}\n```", ephemeral: true); // ...and respond with the new content.
 				break;
 		}
 	}
@@ -203,7 +203,7 @@ internal class TriggerCommands: Command
 		}
 		
 		await Program.SaveTriggers(); // ...save the changes...
-		await context.RespondAsync($"Removed trigger with name `{triggerName}`."); // ...and respond with a status update.
+		await context.RespondAsync($"Removed trigger with name `{triggerName}`.", ephemeral: true); // ...and respond with a status update.
 	}
 
 	internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
