@@ -9,12 +9,13 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord.Interactions;
 
 namespace NelsonsWeirdTwin;
 
 internal static class Program
 {
-	private static DiscordSocketClient Client;
+	public static DiscordSocketClient Client;
 
 	public static Dictionary<string, string> TriggersResponsesDict = new();
 
@@ -26,7 +27,8 @@ internal static class Program
 		await TryLoadTriggers();
 
 		var token = Environment.GetEnvironmentVariable("TOKEN");
-		if (string.IsNullOrEmpty(token))
+
+        if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
 			Console.ReadLine(); // wait for response from me to close
@@ -35,9 +37,11 @@ internal static class Program
 
 		var config = new DiscordSocketConfig
 		{
-			GatewayIntents = GatewayIntents.AllUnprivileged | GatewayIntents.MessageContent
+			GatewayIntents = GatewayIntents.All
 		};
 		Client = new DiscordSocketClient(config);
+
+		
 		Client.Log += message => {
 			Console.WriteLine(message.Message);
 			return Task.CompletedTask;
@@ -52,18 +56,14 @@ internal static class Program
 
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
-
-		//var running = true;
-		while (true)
-		{
+        while (true)
+        {
 			switch (Console.ReadLine())
 			{
 				case "ex":
 					await Client.StopAsync();
 					await Client.LogoutAsync();
 
-					//running = false;
-					//break;
 					return;
 				case "u":
 					await TryLoadTriggers();
@@ -81,6 +81,8 @@ internal static class Program
 
 	private static async Task MessageReceived(SocketMessage msg)
 	{
+		// if message is sent without attachment in #mod-showoff, remove it
+		if(msg.Channel.Id == 1357125993717825667 && msg.Attachments.Count == 0) await msg.DeleteAsync();
 		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
 			//Console.WriteLine(msg.Type);
