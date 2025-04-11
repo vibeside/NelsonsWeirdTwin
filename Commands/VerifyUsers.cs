@@ -20,14 +20,24 @@ namespace NelsonsWeirdTwin.Commands
                 "User to be verified",
                 isRequired:true)
             .Build();
-        internal override Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
+        internal async override Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
         {
-            Console.WriteLine("Executing.");
             if (context.Data.Options.First().Value is SocketGuildUser user)
             {
-                Console.WriteLine(user.Username); // verify
+                // magic number for unverified
+                // 1354831227152109590
+                // magic for verified
+                // 1357079958954049717
+                await user.AddRoleAsync(1357079958954049717);
+                await user.RemoveRoleAsync(1354831227152109590);
+                await context.RespondAsync($"<@{user.Id}> has been verified!", ephemeral: true);
+                return;
             }
-            return Task.CompletedTask;
+            else
+            {
+                await context.RespondAsync("Couldn't find user!",ephemeral:true);
+            }
+            
         }
     }
 }
