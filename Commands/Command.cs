@@ -14,8 +14,8 @@ internal abstract class Command
 			await guild.CreateApplicationCommandAsync(CommandProperties);
 		else
 		{
-			Console.WriteLine("WARNING: Registering global commands because a guild was not provided.");
-			await client.CreateGlobalApplicationCommandAsync(CommandProperties);
+			Console.WriteLine("WARNING: A guild was not provided or not found - commands will not be registered!");
+			return;
 		}
 		
 		Console.WriteLine($"Registered \"{CommandProperties.Name}\".");
@@ -23,11 +23,11 @@ internal abstract class Command
 
 	internal virtual async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
 	{
-		await context.RespondAsync("Not implemented.");
+		await context.RespondAsync("Not implemented."); // This is called when the command is executed, but OnExecuted wasn't overridden.
 	}
 	
 	internal virtual async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context)
 	{
-		await context.RespondAsync("Not implemented.");
+		await context.RespondAsync("Not implemented."); // This is called when a modal was submit, but OnModalSubmitted wasn't overridden.
 	}
 }
