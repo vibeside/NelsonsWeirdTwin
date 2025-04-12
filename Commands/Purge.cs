@@ -39,34 +39,38 @@ internal class PurgeCommand : Command
 			await context.RespondAsync("This command can only be used in text channels.");
 			return;
 		}
-
-		if (upto is null)
+		if (string.IsNullOrEmpty(upto))
 		{
 			await context.RespondAsync("You must specify a message ID to purge up to.");
 			return;
 		}
-
-		var messages = (await channel.GetMessagesAsync(limit: MaxPurgeAmount).FlattenAsync()).ToList();
-
-		var uptoMessage = messages.FirstOrDefault(m => m.Id.ToString() == upto);
+		
+		if (!ulong.TryParse(upto, out var messageId))
+		{
+			await context.RespondAsync("Invalid message ID. Please provide a valid message ID.");
+			return;
+		}
+		
+		var uptoMessage = await context.Channel.GetMessageAsync(messageId);
 		if (uptoMessage == null)
 		{
 			await context.RespondAsync($"Could not find message with ID {upto}. It may be past the {MaxPurgeAmount} message purge limit, or it may not exist.");
 			return;
 		}
 
-		messages.RemoveAll(m => m.CreatedAt > DateTimeOffset.UtcNow.AddDays(-14)); // Discord only allows purging messages from the last 14 days.
-		messages.RemoveAll(m => !(m.CreatedAt > uptoMessage.CreatedAt)); // Remove all messages that are before the specified message.
-		if (user != null) messages.RemoveAll(m => m.Author.Id != user.Id); // Finally, filter out messages that are not from the specified user.
+		var messagesToPurge = (await channel.GetMessagesAsync(limit: MaxPurgeAmount).FlattenAsync()).ToList();
+		messagesToPurge.RemoveAll(msg => msg.CreatedAt < DateTimeOffset.UtcNow.AddDays(-14)); // removes any messages from the list that are older than 14 days
+		messagesToPurge.RemoveAll(msg => msg.CreatedAt <= uptoMessage.CreatedAt); // removes any messages from the list that are older than the specified message
+		if (user != null) messagesToPurge.RemoveAll(msg => msg.Author.Id != user.Id); // remove any messages from the list that are not from the specified user
 
-		var purged = messages.Count;
+		var purged = messagesToPurge.Count;
 		if (purged == 0)
 		{
 			await context.RespondAsync("No messages to purge.");
 			return;
 		}
 
-		await channel.DeleteMessagesAsync(messages);
+		await channel.DeleteMessagesAsync(messagesToPurge);
 		await context.RespondAsync($"Purged {purged} {Utils.Plural(purged, "message", "messages")}.");
 
 		await Task.Delay(2000);
