@@ -137,7 +137,7 @@ internal class TriggerCommands: Command
 					return;
 				}
 				
-				var aliasesList = aliases.Split('\n').Select(a => a.ToLower()).ToList();
+				var aliasesList = aliases.Split('\n').ToList();
 				if (aliasesList.Count == 0) // ...check if the aliases are empty...
 				{
 					await modal.RespondAsync(NoAliases, ephemeral: true);
@@ -177,7 +177,6 @@ internal class TriggerCommands: Command
 				}
 				
 				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-				
 				var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
 				if (existing == null) // ...check if the trigger exists...
 				{
@@ -290,8 +289,7 @@ internal class TriggerCommands: Command
 			return;
 		}
 
-		var lowered = aliasesList.Select(a => a.ToLower()).ToList(); // ...make them lowercase to avoid case sensitivity issues...
-		var conflicts = CheckForConflicts(lowered, id); // ...check if the aliases already exist...
+		var conflicts = CheckForConflicts(aliasesList, id); // ...check if the aliases already exist...
 		if (conflicts.Count > 0) // ...alert the user if they do...
 		{
 			await context.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)), ephemeral: true);
@@ -302,7 +300,7 @@ internal class TriggerCommands: Command
 		await Program.AddNewTrigger(new TriggerItem
 		{
 			Id = id,
-			Aliases = lowered,
+			Aliases = aliasesList,
 			Response = response
 		}); // ...add the new trigger to the list...
 		
