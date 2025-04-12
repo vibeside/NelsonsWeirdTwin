@@ -190,38 +190,40 @@ internal static class Program
 	
 	private static async Task LoadCommands()
 	{
-		try
+		var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
+		var types = assembly.GetTypes() // ...get all types...
+			.Where(t => t.IsClass && !t.IsAbstract &&
+			            t.IsSubclassOf(
+				            typeof(Command))) // ...and filter them to only include classes that inherit from Command.
+			.ToList();
+		if (types.Count == 0)
 		{
-			var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
-			var types = assembly.GetTypes() // ...get all types...
-				.Where(t => t.IsClass && !t.IsAbstract && t.IsSubclassOf(typeof(Command))) // ...and filter them to only include classes that inherit from Command.
-				.ToList();
-			if (types.Count == 0)
-			{
-				Console.WriteLine("WARNING: No commands found.");
-				return;
-			}
+			Console.WriteLine("WARNING: No commands found.");
+			return;
+		}
 
-			foreach (var type in types)
-			{
-				var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
-				if (command == null) continue;
+		foreach (var type in types)
+		{
+			var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
+			if (command == null) continue;
 
 			if (command.CommandProperties == null)
 			{
 				Console.WriteLine($"Command \"{type.Name}\" does not have a CommandProperties property. Skipping.");
 				continue;
 			}
+
 			CommandsList.Add(command); // ...and add it to the list of commands.
 		}
-		
-		Console.WriteLine($"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
-		
+
+		Console.WriteLine(
+			$"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
+
 		foreach (var command in CommandsList)
 		{
 			var guild = Client.GetGuild(1349221936470687764); // S1 Modding
 			guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
-			
+
 			await command.RegisterCommand(Client, guild);
 		}
 	}
