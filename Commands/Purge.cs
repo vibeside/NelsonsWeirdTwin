@@ -31,7 +31,7 @@ internal class PurgeCommand : Command
 			.AddOption(
 				new SlashCommandOptionBuilder()
 					.WithName("inclusive")
-					.WithDescription("Deletes all messages up to & including 'upto' message.")
+					.WithDescription("Purges all messages up to & including 'upto' message.")
 					.WithType(ApplicationCommandOptionType.Boolean)
 					.WithRequired(false)
 			)
