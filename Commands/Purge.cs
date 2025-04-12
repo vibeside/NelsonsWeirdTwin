@@ -55,9 +55,9 @@ internal class PurgeCommand : Command
 			return;
 		}
 
-		if (user != null) messages.RemoveAll(m => m.Author.Id != user.Id);
 		messages.RemoveAll(m => m.CreatedAt > DateTimeOffset.UtcNow.AddDays(-14)); // Discord only allows purging messages from the last 14 days.
-		messages.RemoveAll(m => m.CreatedAt < uptoMessage.CreatedAt); // Remove all messages before the specified message.
+		messages.RemoveAll(m => !(m.CreatedAt > uptoMessage.CreatedAt)); // Remove all messages that are before the specified message.
+		if (user != null) messages.RemoveAll(m => m.Author.Id != user.Id); // Finally, filter out messages that are not from the specified user.
 
 		var purged = messages.Count;
 		if (purged == 0)
