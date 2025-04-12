@@ -12,21 +12,21 @@ internal class PurgeCommand : Command
 
     internal override SlashCommandProperties CommandProperties =>
     new SlashCommandBuilder()
-    .WithName("purge")
-    .WithDescription("Purge messages from a channel.")
-    .AddOption(
+        .WithName("purge")
+        .WithDescription("Purge messages from a channel.")
+        .AddOption(
     new SlashCommandOptionBuilder()
-    .WithName("upto")
-    .WithDescription("Delete up to a certain message ID.")
-    .WithType(ApplicationCommandOptionType.String)
-    .WithRequired(true)
+        .WithName("upto")
+        .WithDescription("Delete up to a certain message ID.")
+        .WithType(ApplicationCommandOptionType.String)
+        .WithRequired(true)
     )
     .AddOption(
     new SlashCommandOptionBuilder()
-    .WithName("from")
-    .WithDescription("Delete only a specific user's messages.")
-    .WithType(ApplicationCommandOptionType.User)
-    .WithRequired(false)
+        .WithName("from")
+        .WithDescription("Delete only a specific user's messages.")
+        .WithType(ApplicationCommandOptionType.User)
+        .WithRequired(false)
     )
     .Build();
 
