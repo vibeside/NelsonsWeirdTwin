@@ -9,8 +9,6 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord.Interactions;
-using System.Runtime.CompilerServices;
 
 namespace NelsonsWeirdTwin;
 
@@ -58,8 +56,8 @@ internal static class Program
 
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
-        while (true)
-        {
+		while (true)
+		{
 			switch (Console.ReadLine())
 			{
 				case "ex":
@@ -99,9 +97,9 @@ internal static class Program
 		}
 		
 		foreach (var k in TriggerItems.Where( // Select any items where...
-				         k => k.Aliases.Any( // ...any of the aliases...
-					         t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
-		))) {
+			         k => k.Aliases.Any( // ...any of the aliases...
+				         t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
+			         ))) {
 			await msg.Channel.SendMessageAsync(k.Response, allowedMentions: AllowedMentions.None);
 			break;
 		}
@@ -209,26 +207,22 @@ internal static class Program
 				var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
 				if (command == null) continue;
 
-				if (command.CommandProperties == null)
-				{
-					Console.WriteLine($"Command \"{type.Name}\" does not have a CommandProperties property. Skipping.");
-					continue;
-				}
-				CommandsList.Add(command); // ...and add it to the list of commands.
-			}
-
-			Console.WriteLine($"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
-
-			foreach (var command in CommandsList)
+			if (command.CommandProperties == null)
 			{
-				var guild = Client.GetGuild(1349221936470687764); // S1 Modding
-				guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
-				await command.RegisterCommand(Client, guild);
+				Console.WriteLine($"Command \"{type.Name}\" does not have a CommandProperties property. Skipping.");
+				continue;
 			}
+			CommandsList.Add(command); // ...and add it to the list of commands.
 		}
-		catch (Exception ex)
+		
+		Console.WriteLine($"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
+		
+		foreach (var command in CommandsList)
 		{
-			Console.WriteLine(ex);
+			var guild = Client.GetGuild(1349221936470687764); // S1 Modding
+			guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
+			
+			await command.RegisterCommand(Client, guild);
 		}
 	}
 }
