@@ -28,12 +28,20 @@ internal class PurgeCommand : Command
 					.WithType(ApplicationCommandOptionType.User)
 					.WithRequired(false)
 			)
+			.AddOption(
+				new SlashCommandOptionBuilder()
+					.WithName("inclusive")
+					.WithDescription("Deletes all messages up to & including 'upto' message.")
+					.WithType(ApplicationCommandOptionType.Boolean)
+					.WithRequired(false)
+			)
 			.Build();
 
 	internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
 	{
 		var upto = context.Data.Options.FirstOrDefault(opt => opt.Name == "upto")?.Value as string;
 		var user = context.Data.Options.FirstOrDefault(opt => opt.Name == "from")?.Value as IUser;
+		var inclusive = (context.Data.Options.FirstOrDefault(opt => opt.Name == "inclusive")?.Value as bool?) ?? false;
 		if (context.Channel is not ITextChannel channel)
 		{
 			await context.RespondAsync("This command can only be used in text channels.");
@@ -61,6 +69,7 @@ internal class PurgeCommand : Command
 		var messagesToPurge = (await channel.GetMessagesAsync(limit: MaxPurgeAmount).FlattenAsync()).ToList();
 		messagesToPurge.RemoveAll(msg => msg.CreatedAt < DateTimeOffset.UtcNow.AddDays(-14)); // removes any messages from the list that are older than 14 days
 		messagesToPurge.RemoveAll(msg => msg.CreatedAt <= uptoMessage.CreatedAt); // removes any messages from the list that are older than the specified message
+		if(inclusive) messagesToPurge.RemoveAll(msg => msg.Id == uptoMessage.Id); // removes the specified message from the list
 		if (user != null) messagesToPurge.RemoveAll(msg => msg.Author.Id != user.Id); // remove any messages from the list that are not from the specified user
 
 		var purged = messagesToPurge.Count;
