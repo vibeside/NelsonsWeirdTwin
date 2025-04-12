@@ -68,8 +68,8 @@ internal class PurgeCommand : Command
 
 		var messagesToPurge = (await channel.GetMessagesAsync(limit: MaxPurgeAmount).FlattenAsync()).ToList();
 		messagesToPurge.RemoveAll(msg => msg.CreatedAt < DateTimeOffset.UtcNow.AddDays(-14)); // removes any messages from the list that are older than 14 days
-		messagesToPurge.RemoveAll(msg => msg.CreatedAt <= uptoMessage.CreatedAt); // removes any messages from the list that are older than the specified message
-		if(inclusive) messagesToPurge.RemoveAll(msg => msg.Id == uptoMessage.Id); // removes the specified message from the list
+		messagesToPurge.RemoveAll(msg => msg.CreatedAt < uptoMessage.CreatedAt); // removes any messages from the list that are older than the specified message
+		if(!inclusive) messagesToPurge.RemoveAll(msg => msg.Id == uptoMessage.Id); // removes the specified message from the list
 		if (user != null) messagesToPurge.RemoveAll(msg => msg.Author.Id != user.Id); // remove any messages from the list that are not from the specified user
 
 		var purged = messagesToPurge.Count;
