@@ -16,15 +16,6 @@ internal class PurgeCommand: Command
 			.WithDescription("Purge messages from a channel.")
 			.AddOption(
 				new SlashCommandOptionBuilder()
-					.WithName("amount")
-					.WithDescription("The amount of messages to purge.")
-					.WithType(ApplicationCommandOptionType.Integer)
-					.WithRequired(false)
-					.WithMinValue(1)
-					.WithMaxValue(MaxPurgeAmount)
-			)
-			.AddOption(
-				new SlashCommandOptionBuilder()
 					.WithName("upto")
 					.WithDescription("Delete up to a certain message ID.")
 					.WithType(ApplicationCommandOptionType.String)
@@ -41,32 +32,22 @@ internal class PurgeCommand: Command
 
 	internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
 	{
-		var amount = (long?)context.Data.Options.FirstOrDefault(opt => opt.Name == "amount")?.Value;
-		var upto = context.Data.Options.FirstOrDefault(opt => opt.Name == "upto")?.Value as string;
-		var user = context.Data.Options.FirstOrDefault(opt => opt.Name == "from")?.Value as IUser;
+		string upto = context.Data.Options.FirstOrDefault(opt => opt.Name == "upto")?.Value as string;
+		IUser user = context.Data.Options.FirstOrDefault(opt => opt.Name == "from")?.Value as IUser;
 		if (context.Channel is not ITextChannel channel)
 		{
 			await context.RespondAsync("This command can only be used in text channels.");
 			return;
 		}
 
-		if (amount is null && upto is null)
+		if (upto is null)
 		{
 			await context.RespondAsync("You must specify either an amount, or up to a message ID, to purge.");
 			return;
 		}
 		
 		var purged = 0;
-		if (amount is not null)
-		{
-			var messages = await channel.GetMessagesAsync(limit: Math.Min(Math.Max((int)amount, 1), MaxPurgeAmount)).FlattenAsync();
-			if (user != null) messages = messages.Where(m => m.Author.Id == user.Id);
-			messages = messages.Where(m => m.CreatedAt > DateTimeOffset.UtcNow.AddDays(-14)).ToList(); // Discord only allows purging messages from the last 14 days.
-			
-			purged = messages.Count();
-			await channel.DeleteMessagesAsync(messages);
-		}
-
+		
 		if (upto is not null)
 		{
 			var messages = await channel.GetMessagesAsync(limit: MaxPurgeAmount).FlattenAsync();

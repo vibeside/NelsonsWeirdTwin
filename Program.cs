@@ -10,6 +10,7 @@ using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord.Interactions;
+using System.Runtime.CompilerServices;
 
 namespace NelsonsWeirdTwin;
 
@@ -83,8 +84,12 @@ internal static class Program
 	private static async Task MessageReceived(SocketMessage msg)
 	{
 		// if message is sent without attachment in #mod-showoff, remove it
-		if(msg.Channel.Id == 1357125993717825667 && msg.Attachments.Count == 0) await msg.DeleteAsync();
-		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
+		if(msg.Channel.Id == 1357125993717825667 && msg.Attachments.Count == 0)
+		{
+			await msg.DeleteAsync();
+			// TODO: implement logic for creating a thread
+		}
+		else if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
 			//Console.WriteLine(msg.Type);
 			//Console.WriteLine(msg.Author.IsBot);
@@ -101,7 +106,6 @@ internal static class Program
 			break;
 		}
 	}
-	
 	private static async Task SlashCommandSubmitted(SocketSlashCommand command)
 	{
 		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
