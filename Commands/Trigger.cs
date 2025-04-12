@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
@@ -24,8 +25,8 @@ internal class TriggerCommands: Command
 					.WithType(ApplicationCommandOptionType.SubCommand)
 					.AddOption(
 						new SlashCommandOptionBuilder()
-							.WithName("name") // Add a subcommand option (/trigger edit [name])
-							.WithDescription("The name of the trigger to edit.")
+							.WithName("id") // Add a subcommand option (/trigger edit [id])
+							.WithDescription("The ID of the trigger to edit.")
 							.WithType(ApplicationCommandOptionType.String)
 							.WithRequired(true)
 							.WithAutocomplete(true)
@@ -38,8 +39,8 @@ internal class TriggerCommands: Command
 					.WithType(ApplicationCommandOptionType.SubCommand)
 					.AddOption(
 						new SlashCommandOptionBuilder()
-							.WithName("name") // Add a subcommand option (/trigger remove [name])
-							.WithDescription("The name of the trigger to remove.")
+							.WithName("id") // Add a subcommand option (/trigger remove [id])
+							.WithDescription("The ID of the trigger to remove.")
 							.WithType(ApplicationCommandOptionType.String)
 							.WithRequired(true)
 							.WithAutocomplete(true)
@@ -50,6 +51,15 @@ internal class TriggerCommands: Command
 	
 	internal override string[] ModalIDs { get; set; } = [ "trigger_add", "trigger_edit" ]; // When you're working with modals, you need to specify the IDs of the modals that this command handles.
 
+	private const string NotFound = "A trigger with an ID of `{0}` could not be found.";
+	private const string AlreadyExists = "A trigger with an ID of `{0}` already exists.";
+	
+	private const string NoAliases = "A trigger needs to have aliases, otherwise how will it show?!";
+	private const string NoResponse = "The trigger's response cannot be empty.";
+	private const string NoId = "The trigger's ID cannot be empty.";
+	
+	private const string ConflictsFound = "One or more aliases already exist:\n- {0}";
+	
 	internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
 	{
 		var option = context.Data.Options.First().Name; // Get the first option, which is the subcommand.
@@ -89,38 +99,65 @@ internal class TriggerCommands: Command
 			{
 				var addTriggerModal = new ModalBuilder()
 					.WithTitle("Add a trigger") // ...build a modal...
-					.WithCustomId("trigger_add") // ...set the ID to "trigger_add" (don't forget to add it to the ModalIDs array above)...
-					.AddTextInput("Trigger Words", "triggerer", placeholder: "Unity Hub download")
-					.AddTextInput("Content", "content", TextInputStyle.Paragraph,
-						"Copy and paste this link into your browser to download in Unity Hub: unityhub://2022.3.32f1/");
+					.WithCustomId(
+						"trigger_add") // ...set the ID to "trigger_add" (don't forget to add it to the ModalIDs array above)...
+					.AddTextInput("ID", "id", placeholder: "unity-hub-dl", required: true, maxLength: 32)
+					.AddTextInput("Response", "resp", TextInputStyle.Paragraph,
+						"Copy and paste this link into your browser to download in Unity Hub: unityhub://2022.3.32f1/", required: true)
+					.AddTextInput("Aliases", "alias", TextInputStyle.Paragraph,
+						"Each alias goes on a new line.", required: true);
 
 				await command.RespondWithModalAsync(addTriggerModal.Build()); // ...and respond with it.
 				break;
 			}
 			case SocketModal modal: // If it's a modal with the ID "trigger_add"...
-				var triggerName = modal.Data.Components.FirstOrDefault(c => c.CustomId == "triggerer")?.Value;
-				var content = modal.Data.Components.FirstOrDefault(c => c.CustomId == "content")?.Value;
-				if (string.IsNullOrEmpty(triggerName)) // ...check if the trigger name is empty...
+				var id = modal.Data.Components.FirstOrDefault(c => c.CustomId == "id")?.Value;
+				var response = modal.Data.Components.FirstOrDefault(c => c.CustomId == "resp")?.Value;
+				var aliases = modal.Data.Components.FirstOrDefault(c => c.CustomId == "alias")?.Value;
+				if (string.IsNullOrEmpty(id)) // ...check if the ID is empty...
 				{
-					await modal.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
+					await modal.RespondAsync(NoId, ephemeral: true);
 					return;
 				}
-				if (string.IsNullOrEmpty(content)) // ...check if the content is empty...
+				if (string.IsNullOrEmpty(response)) // ...check if the response text is empty...
 				{
-					await modal.RespondAsync("Trigger content cannot be empty.", ephemeral: true);
+					await modal.RespondAsync(NoResponse, ephemeral: true);
+					return;
+				}
+				if (string.IsNullOrEmpty(aliases)) // ...check if the aliases text is empty...
+				{
+					await modal.RespondAsync(NoAliases, ephemeral: true);
 					return;
 				}
 				
-				triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-				
-				if (Program.TriggersResponsesDict.ContainsKey(triggerName)) // ...check if the trigger already exists...
+				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+				if (Program.TriggerItems.Any(t => t.Id == id)) // ...check if the trigger already exists...
 				{
-					await modal.RespondAsync($"Trigger with the name `{triggerName}` already exists.", ephemeral: true);
+					await modal.RespondAsync(string.Format(AlreadyExists, id), ephemeral: true);
 					return;
 				}
 				
-				await Program.AddTriggerAndResponse(triggerName, content); // ...add the trigger and response to the dictionary...
-				await modal.RespondAsync($"Added trigger with name `{triggerName}`, and content:\n```\n{content}\n```", ephemeral: true); // ...and respond with the trigger and content.
+				var aliasesList = aliases.Split('\n').Select(a => a.ToLower()).ToList();
+				if (aliasesList.Count == 0) // ...check if the aliases are empty...
+				{
+					await modal.RespondAsync(NoAliases, ephemeral: true);
+					return;
+				}
+
+				var conflicts = CheckForConflicts(aliasesList); // ...check if the aliases already exist...
+				if (conflicts.Count != 0) // ...alert the user if they do...
+				{
+					await modal.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)), ephemeral: true);
+					return;
+				}
+
+				await Program.AddNewTrigger(new TriggerItem
+				{
+					Id = id,
+					Aliases = aliasesList,
+					Response = response
+				}); // ...add the trigger to the list...
+				await modal.RespondAsync($"Added trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the trigger and content.
 				break;
 		}
 	}
@@ -132,62 +169,40 @@ internal class TriggerCommands: Command
 			case SocketSlashCommand command: // If it's a command...
 			{
 				var subcommand = command.Data.Options.First(); // ...get the first option, which is the subcommand...
-				var triggerName = subcommand.Options.FirstOrDefault(option => option.Name == "name")?.Value.ToString(); // ...get the name variable from the subcommand...
-				if (string.IsNullOrEmpty(triggerName)) // ...check if it's empty...
+				var id = subcommand.Options.FirstOrDefault(option => option.Name == "id")?.Value.ToString(); // ...get the ID variable from the subcommand...
+				if (string.IsNullOrEmpty(id)) // ...check if it's empty...
 				{
-					await command.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
+					await command.RespondAsync(NoId, ephemeral: true);
 					return;
 				}
 				
-				triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
 				
-				if (!Program.TriggersResponsesDict.TryGetValue(triggerName, out var currentContent)) // ...check if the trigger exists...
+				var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
+				if (existing == null) // ...check if the trigger exists...
 				{
-					await command.RespondAsync($"Trigger with the name `{triggerName}` not found.", ephemeral: true);
+					await command.RespondAsync(string.Format(NotFound, id), ephemeral: true);
 					return;
 				}
 				
 				var editTriggerModal = new ModalBuilder()
 					.WithTitle("Edit a trigger") // ...build a modal...
 					.WithCustomId("trigger_edit") // ...set the ID to "trigger_edit" (also don't forget to add this one to the ModalIDs array above)...
-					.AddTextInput("Trigger Words", "triggerer",
-						placeholder: "Unity Hub download", value: triggerName,
-						required: false
-					)
-					.AddTextInput("Content", "content", TextInputStyle.Paragraph,
-						"hi i am edit", value: currentContent,
-						required: false
-					);
+					.AddTextInput("ID", "id", placeholder: "unity-hub-dl", value: existing.Id, required: true, maxLength: 32)
+					.AddTextInput("Response", "resp", TextInputStyle.Paragraph,
+						"Copy and paste this link into your browser to download in Unity Hub: unityhub://2022.3.32f1/", value: existing.Response, required: true)
+					.AddTextInput("Aliases", "alias", TextInputStyle.Paragraph,
+						"Each alias goes on a new line.", value: string.Join("\n", existing.Aliases), required: true);
 
 				await command.RespondWithModalAsync(editTriggerModal.Build()); // ...and respond with it.
 				break;
 			}
 			case SocketModal modal: // If it's a modal with the ID "trigger_edit"...
-				var id = modal.Data.Components.FirstOrDefault(c => c.CustomId == "triggerer")?.Value;
-				var content = modal.Data.Components.FirstOrDefault(c => c.CustomId == "content")?.Value;
-				if (string.IsNullOrEmpty(id)) // ...check if the trigger name is empty...
-				{
-					await modal.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
-					return;
-				}
-				if (string.IsNullOrEmpty(content)) // ...check if the content is empty...
-				{
-					await modal.RespondAsync("Trigger content cannot be empty.", ephemeral: true);
-					return;
-				}
+				var tid = modal.Data.Components.FirstOrDefault(c => c.CustomId == "id")?.Value;
+				var response = modal.Data.Components.FirstOrDefault(c => c.CustomId == "resp")?.Value;
+				var aliases = modal.Data.Components.FirstOrDefault(c => c.CustomId == "alias")?.Value;
 				
-				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-				
-				if (!Program.TriggersResponsesDict.ContainsKey(id)) // ...check if the trigger exists...
-				{
-					await modal.RespondAsync($"Trigger with the name `{id}` does not exist.", ephemeral: true);
-					return;
-				}
-				
-				Program.TriggersResponsesDict[id] = content; // ...update the trigger and response in the dictionary...
-				await Program.SaveTriggers(); // ...save the changes...
-				
-				await modal.RespondAsync($"Trigger with the name `{id}` was updated to:\n```\n{content}\n```", ephemeral: true); // ...and respond with the new content.
+				await DoTriggerUpdate(tid, response, aliases, modal); // ...call the DoTriggerUpdate method to handle the trigger update.
 				break;
 		}
 	}
@@ -195,28 +210,30 @@ internal class TriggerCommands: Command
 	private async Task HandleRemove(SocketSlashCommand context)
 	{
 		var subcommand = context.Data.Options.First(); // Get the first option, which is the subcommand...
-		var triggerName = subcommand.Options.FirstOrDefault(option => option.Name == "name")?.Value.ToString(); // ...get the name variable from the subcommand...
-		if (string.IsNullOrEmpty(triggerName)) // ...check if it's empty...
+		var tid = subcommand.Options.FirstOrDefault(option => option.Name == "id")?.Value.ToString(); // ...get the ID variable from the subcommand...
+		if (string.IsNullOrEmpty(tid)) // ...check if it's empty...
 		{
-			await context.RespondAsync("Trigger name cannot be empty.", ephemeral: true);
+			await context.RespondAsync(NoId, ephemeral: true);
 			return;
 		}
 
-		triggerName = triggerName.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-		
-		if (!Program.TriggersResponsesDict.Remove(triggerName, out _)) // ...check if the trigger exists and remove it...
+		tid = tid.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == tid); // ...check if the trigger exists...
+		if (existing == null)
 		{
-			await context.RespondAsync($"Trigger with the name `{triggerName}` not found.", ephemeral: true);
+			await context.RespondAsync(string.Format(NotFound, tid), ephemeral: true);
 			return;
 		}
 		
+		Program.TriggerItems.Remove(existing); // ...remove the trigger...
 		await Program.SaveTriggers(); // ...save the changes...
-		await context.RespondAsync($"Removed trigger with name `{triggerName}`.", ephemeral: true); // ...and respond with a status update.
+		
+		await context.RespondAsync($"Removed trigger with ID `{tid}`.", ephemeral: true); // ...and respond with a status update.
 	}
 
 	internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
 	{
-		if (context.Data.Current.Name != "name")
+		if (context.Data.Current.Name != "id")
 		{
 			await context.RespondAsync([]);
 			return;
@@ -225,18 +242,78 @@ internal class TriggerCommands: Command
 		var currentValue = context.Data.Current.Value.ToString();
 		if(string.IsNullOrEmpty(currentValue))
 		{
-			await context.RespondAsync(Program.TriggersResponsesDict.Keys
-				.Select(k => new AutocompleteResult(k, k))
+			await context.RespondAsync(Program.TriggerItems
+				.Select(k => new AutocompleteResult(k.Id, k.Id))
 				.Take(25)
 				.ToList());
 			return;
 		}
 		
-		var options = Program.TriggersResponsesDict.Keys
-			.Where(k => k.Contains(currentValue, StringComparison.CurrentCultureIgnoreCase))
-			.Select(k => new AutocompleteResult(k, k))
+		var options = Program.TriggerItems
+			.Where(k => k.Id.Contains(currentValue, StringComparison.CurrentCultureIgnoreCase))
+			.Select(k => new AutocompleteResult(k.Id, k.Id))
 			.Take(25)
 			.ToList();
 		await context.RespondAsync(options);
+	}
+
+	private async Task DoTriggerUpdate(string id, string response, string aliases, IDiscordInteraction context)
+	{
+		if (string.IsNullOrEmpty(id)) // ...check if the ID is empty...
+		{
+			await context.RespondAsync(NoId, ephemeral: true);
+			return;
+		}
+		if (string.IsNullOrEmpty(response)) // ...check if the response is empty...
+		{
+			await context.RespondAsync(NoResponse, ephemeral: true);
+			return;
+		}
+		if (string.IsNullOrEmpty(aliases)) // ...check if the aliases is empty...
+		{
+			await context.RespondAsync(NoAliases, ephemeral: true);
+			return;
+		}
+				
+		id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
+		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
+		if (existing == null) // ...check if the trigger exists...
+		{
+			await context.RespondAsync(string.Format(NotFound, id), ephemeral: true);
+			return;
+		}
+		
+		var aliasesList = aliases.Split('\n').ToList();
+		if (aliasesList.Count == 0) // ...check if the aliases are empty...
+		{
+			await context.RespondAsync(NoAliases, ephemeral: true);
+			return;
+		}
+
+		var lowered = aliasesList.Select(a => a.ToLower()).ToList(); // ...make them lowercase to avoid case sensitivity issues...
+		var conflicts = CheckForConflicts(lowered, id); // ...check if the aliases already exist...
+		if (conflicts.Count > 0) // ...alert the user if they do...
+		{
+			await context.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)), ephemeral: true);
+			return;
+		}
+
+		Program.TriggerItems.RemoveAll(t => t.Id == id); // ...remove the old trigger...
+		await Program.AddNewTrigger(new TriggerItem
+		{
+			Id = id,
+			Aliases = lowered,
+			Response = response
+		}); // ...add the new trigger to the list...
+		
+		await context.RespondAsync($"Updated trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the new trigger and content.
+	}
+	private List<string> CheckForConflicts(List<string> toBeAddedAliases)
+	{
+		return toBeAddedAliases.Where(a => Program.TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase))).ToList(); // ...check if any of the aliases already exist...
+	}
+	private List<string> CheckForConflicts(List<string> toBeAddedAliases, string myID)
+	{
+		return toBeAddedAliases.Where(a => Program.TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase) && t.Id != myID)).ToList(); // ...check if any of the aliases already exist...
 	}
 }

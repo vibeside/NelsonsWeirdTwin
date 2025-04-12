@@ -17,8 +17,7 @@ internal static class Program
 {
 	public static DiscordSocketClient Client;
 
-	public static Dictionary<string, string> TriggersResponsesDict = new();
-
+	public static List<TriggerItem> TriggerItems = [];
 	private static readonly List<Command> CommandsList = [];
 
 	private static async Task Main()
@@ -31,7 +30,7 @@ internal static class Program
 		if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
-			Console.ReadLine(); // wait for response from me to close
+			Console.ReadLine(); // Pull a bash "pause" fr
 			return;
 		}
 
@@ -48,12 +47,13 @@ internal static class Program
 			return Task.CompletedTask;
 		};
 		Client.Ready += OnReady;
-
+		
 		Client.MessageReceived += MessageReceived;
 
-		Client.SlashCommandExecuted += SlashCommandHandler;
-		Client.AutocompleteExecuted += AutoCompleteHandler;
+		Client.SlashCommandExecuted += SlashCommandSubmitted;
 		Client.ModalSubmitted += ModalSubmitted;
+		
+		Client.AutocompleteExecuted += AutoCompleteHandler;
 
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
@@ -93,25 +93,51 @@ internal static class Program
 			return;
 		}
 		
-		foreach (var k in TriggersResponsesDict.Keys.Where(k => msg.Content.Contains(k, StringComparison.CurrentCultureIgnoreCase)))
-		{
-			await msg.Channel.SendMessageAsync(TriggersResponsesDict[k], allowedMentions: AllowedMentions.None);
-			return; // only respond to the first trigger found
+		foreach (var k in TriggerItems.Where( // Select any items where...
+				         k => k.Aliases.Any( // ...any of the aliases...
+					         t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
+		))) {
+			await msg.Channel.SendMessageAsync(k.Response, allowedMentions: AllowedMentions.None);
+			break;
 		}
 	}
 	
-	private static async Task SlashCommandHandler(SocketSlashCommand command)
+	private static async Task SlashCommandSubmitted(SocketSlashCommand command)
 	{
 		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
 		var commandName = command.Data.Name;
 		
 		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
 		{
-			await cmd.OnExecuted(Client, command);
+			try
+			{
+				await cmd.OnExecuted(Client, command);
+			} catch (Exception e)
+			{
+				Console.WriteLine($"An error occurred while executing command \"{commandName}\"!");
+				Console.WriteLine(e);
+				
+				await command.ModifyOriginalResponseAsync(properties =>
+				{
+					properties.Content = $"An error occurred while executing command \"{commandName}\":\n```\n{e.Message}\n```";
+				});
+			}
 			return;
 		}
 		
 		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
+	}
+	private static async Task ModalSubmitted(SocketModal modal)
+	{
+		if (modal.User is { IsBot: true } or { IsWebhook: true }) return;
+		
+		foreach (var cmd in CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
+		{
+			await cmd.OnModalSubmitted(Client, modal);
+			return;
+		}
+		
+		await modal.RespondAsync($"Modal {modal.Data.CustomId} not found!");
 	}
 
 	private static async Task AutoCompleteHandler(SocketAutocompleteInteraction context)
@@ -125,35 +151,20 @@ internal static class Program
 			return;
 		}
 	}
-	
-	private static async Task ModalSubmitted(SocketModal modal)
-	{
-		if (modal.User is { IsBot: true } or { IsWebhook: true }) return;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
-		{
-			await cmd.OnModalSubmitted(Client, modal);
-			return;
-		}
-		
-		await modal.RespondAsync($"Modal \"{modal.Data.CustomId}\" not found!!!!");
-	}
 	#endregion
 
-	internal static async Task<string> AddTriggerAndResponse(string trigger, string response) 
+	internal static async Task AddNewTrigger(TriggerItem trigger) 
 	{
-		TriggersResponsesDict.Add(trigger, response);
+		TriggerItems.Add(trigger);
 		await SaveTriggers();
-		
-		return $"Trigger \"{trigger}\" was added.";
 	}
 
 	internal static async Task TryLoadTriggers()
 	{
 		try
 		{
-			TriggersResponsesDict =
-				JsonConvert.DeserializeObject<Dictionary<string, string>>(await File.ReadAllTextAsync("triggers.json"));
+			TriggerItems =
+				JsonConvert.DeserializeObject<List<TriggerItem>>(await File.ReadAllTextAsync("triggers.json"));
 		} catch (FileNotFoundException)
 		{
 			Console.WriteLine("Triggers file not found. Creating a new one.");
@@ -172,7 +183,7 @@ internal static class Program
 	
 	internal static async Task SaveTriggers()
 	{
-		await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggersResponsesDict));
+		await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggerItems, Formatting.Indented));
 	}
 	
 	private static async Task LoadCommands()
@@ -200,7 +211,7 @@ internal static class Program
 			CommandsList.Add(command); // ...and add it to the list of commands.
 		}
 		
-		Console.WriteLine($"Loaded {CommandsList.Count} command" + (CommandsList.Count != 1 ? "s" : "") + ".");
+		Console.WriteLine($"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
 		
 		foreach (var command in CommandsList)
 		{

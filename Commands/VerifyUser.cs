@@ -5,7 +5,7 @@ using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin.Commands
 {
-	internal class VerifyUsers : Command
+	internal class VerifyUser : Command
 	{
 		internal override SlashCommandProperties CommandProperties => 
 			new SlashCommandBuilder()
