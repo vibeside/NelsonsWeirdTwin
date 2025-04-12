@@ -273,7 +273,7 @@ internal class TriggerCommands: Command
 			await context.RespondAsync(NoAliases, ephemeral: true);
 			return;
 		}
-				
+		
 		id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
 		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
 		if (existing == null) // ...check if the trigger exists...
