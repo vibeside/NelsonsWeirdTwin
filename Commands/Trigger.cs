@@ -263,12 +263,12 @@ internal class TriggerCommands: Command
 			await context.RespondAsync(NoId, ephemeral: true);
 			return;
 		}
-		if (string.IsNullOrEmpty(response)) // ...check if the response is empty...
+		if (string.IsNullOrEmpty(response)) // ...check if the response text is empty...
 		{
 			await context.RespondAsync(NoResponse, ephemeral: true);
 			return;
 		}
-		if (string.IsNullOrEmpty(aliases)) // ...check if the aliases is empty...
+		if (string.IsNullOrEmpty(aliases)) // ...check if the aliases text is empty...
 		{
 			await context.RespondAsync(NoAliases, ephemeral: true);
 			return;
