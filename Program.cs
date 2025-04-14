@@ -93,43 +93,32 @@ internal static class Program
 	private static async Task SelectMenuHandler(SocketMessageComponent c)
 	{
 		// Gave*
-		string successMessage = "Gave ";
         SocketGuildUser u = c.User as SocketGuildUser;
 		if (u == null) await c.RespondAsync("Couldn't find user");
 		else
 		{
 			// Gave*user*the
-			successMessage += $"{u.Username} the ";
-			// IL2CPP
-			// MONO
-			foreach (IRole r in RolePicker.roles)
-			{
-				// HAS NONE
-				foreach (IRole uR in u.Roles.Where(x => RolePicker.roles.Contains(x)))
-				{
-					// SELECTS BOTH
-					// IF mono.ID is in selected(it is)
-					if (c.Data.Values.Contains(r.Id.ToString()))
-                    {
-						//if user has role(they dont)
-						if (!u.Roles.Contains(r))
-						{
-							Console.WriteLine($"Should add {r.Name}");
-						}
-						else
-						{
-							Console.WriteLine($"Shouldn't do anything");
-						}
-						break;
-                    }
-                    else
-					{
-						Console.WriteLine($"Should remove {r.Name}");
-						break;
-					}
-				}
-			}
-			await c.RespondAsync(successMessage,ephemeral: true);
+            // Acceptable roles:
+            // Mono
+            // Il2Cpp
+			List<IRole> chosenRoles = RolePicker.roles.Where(r => c.Data.Values.Contains(r.Id.ToString())).ToList();
+			List<IRole> removedRoles = RolePicker.roles.Where(r => !c.Data.Values.Contains(r.Id.ToString())).ToList();
+			// foreach role in chosen roles
+			string chosenRolesJoined = string.Join(", ", chosenRoles.ConvertAll(x => $"<@&{x.Id}>"));
+			string removedRolesJoined = string.Join(", ", removedRoles.ConvertAll(x => $"<@&{x.Id}>"));
+
+			string addedRolesPart = chosenRoles.Count == 0 
+				? "Didn't give any roles" 
+				: $"Gave {u.Username} the roles {chosenRolesJoined}";
+
+			string removedRolesPart = removedRoles.Count == 0
+				? ""
+				: $"and removed the roles {removedRolesJoined}";
+
+            string successMessage = $"{addedRolesPart} {removedRolesPart}";
+			await u.RemoveRolesAsync(removedRoles);
+            await u.AddRolesAsync(chosenRoles);
+            await c.RespondAsync(successMessage,ephemeral: true,allowedMentions:AllowedMentions.None);
         }
     }
 
