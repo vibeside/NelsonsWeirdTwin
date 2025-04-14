@@ -52,12 +52,13 @@ internal static class Program
 		Client.SlashCommandExecuted += SlashCommandSubmitted;
 		Client.ModalSubmitted += ModalSubmitted;
 
-		Client.SelectMenuExecuted += SelectHandler;
+		Client.SelectMenuExecuted += SelectMenuHandler;
 
 		Client.AutocompleteExecuted += AutoCompleteHandler;
 		
         await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
+		
 		while (true)
 		{
 			switch (Console.ReadLine())
@@ -89,7 +90,7 @@ internal static class Program
         Console.WriteLine("Client is ready.");
 	}
 
-	private static async Task SelectHandler(SocketMessageComponent c)
+	private static async Task SelectMenuHandler(SocketMessageComponent c)
 	{
 		// Gave*
 		string successMessage = "Gave ";
@@ -97,31 +98,37 @@ internal static class Program
 		if (u == null) await c.RespondAsync("Couldn't find user");
 		else
 		{
-			// loop through every role
-			// in that loop, loop through user roles filtered by rolepicker list
-			// then loop through the options and if it cant find it, remove
 			// Gave*user*the
 			successMessage += $"{u.Username} the ";
-            foreach (string s in c.Data.Values)
-            {
-                foreach (IRole r in RolePicker.roles)
-                {
-                    if (r.Id.ToString() == s)
-                    {
-                        await u.AddRoleAsync(r);
-                        // Gave*user*the*role*...
-                        successMessage += r.Name + " ";
-                    }
-                }
-                foreach (IRole uR in u.Roles) 
+			// IL2CPP
+			// MONO
+			foreach (IRole r in RolePicker.roles)
+			{
+				// HAS NONE
+				foreach (IRole uR in u.Roles.Where(x => RolePicker.roles.Contains(x)))
 				{
-					//foreach user role, if it cant find the string for it, but the user has it, remove it?
-					// no, that removes the admnin and other roles
+					// SELECTS BOTH
+					// IF mono.ID is in selected(it is)
+					if (c.Data.Values.Contains(r.Id.ToString()))
+                    {
+						//if user has role(they dont)
+						if (!u.Roles.Contains(r))
+						{
+							Console.WriteLine($"Should add {r.Name}");
+						}
+						else
+						{
+							Console.WriteLine($"Shouldn't do anything");
+						}
+						break;
+                    }
+                    else
+					{
+						Console.WriteLine($"Should remove {r.Name}");
+						break;
+					}
 				}
-
-            }
-            // Gave*user*the*...*...*roles
-            successMessage += "roles";
+			}
 			await c.RespondAsync(successMessage,ephemeral: true);
         }
     }
