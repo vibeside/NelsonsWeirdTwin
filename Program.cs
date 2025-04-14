@@ -51,10 +51,12 @@ internal static class Program
 
 		Client.SlashCommandExecuted += SlashCommandSubmitted;
 		Client.ModalSubmitted += ModalSubmitted;
-		
-		Client.AutocompleteExecuted += AutoCompleteHandler;
 
-		await Client.LoginAsync(TokenType.Bot, token);
+		Client.SelectMenuExecuted += SelectHandler;
+
+		Client.AutocompleteExecuted += AutoCompleteHandler;
+		
+        await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
 		while (true)
 		{
@@ -68,6 +70,12 @@ internal static class Program
 				case "u":
 					await TryLoadTriggers();
 					break;
+				case "c":
+					Console.Clear();
+					break;
+				default:
+					Console.WriteLine("Arg not recognized");
+					break;
 			}
 		}
 	}
@@ -76,10 +84,49 @@ internal static class Program
 	private static async Task OnReady()
 	{
 		await LoadCommands();
-		Console.WriteLine("Client is ready.");
+        RolePicker.roles.Add(Client.Guilds.First().GetRole(1359944109350981733));
+        RolePicker.roles.Add(Client.Guilds.First().GetRole(1359943967810256896));
+        Console.WriteLine("Client is ready.");
 	}
 
-	private static async Task MessageReceived(SocketMessage msg)
+	private static async Task SelectHandler(SocketMessageComponent c)
+	{
+		// Gave*
+		string successMessage = "Gave ";
+        SocketGuildUser u = c.User as SocketGuildUser;
+		if (u == null) await c.RespondAsync("Couldn't find user");
+		else
+		{
+			// loop through every role
+			// in that loop, loop through user roles filtered by rolepicker list
+			// then loop through the options and if it cant find it, remove
+			// Gave*user*the
+			successMessage += $"{u.Username} the ";
+            foreach (string s in c.Data.Values)
+            {
+                foreach (IRole r in RolePicker.roles)
+                {
+                    if (r.Id.ToString() == s)
+                    {
+                        await u.AddRoleAsync(r);
+                        // Gave*user*the*role*...
+                        successMessage += r.Name + " ";
+                    }
+                }
+                foreach (IRole uR in u.Roles) 
+				{
+					//foreach user role, if it cant find the string for it, but the user has it, remove it?
+					// no, that removes the admnin and other roles
+				}
+
+            }
+            // Gave*user*the*...*...*roles
+            successMessage += "roles";
+			await c.RespondAsync(successMessage,ephemeral: true);
+        }
+    }
+
+    private static async Task MessageReceived(SocketMessage msg)
 	{
 		// if message is sent without attachment in #mod-showoff, remove it
 		if(msg.Channel.Id == 1357125993717825667 && msg.Attachments.Count == 0)

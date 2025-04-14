@@ -103,11 +103,17 @@ namespace NelsonsWeirdTwin.Commands
             emb.WithDescription("Do you plan on making Mono mods, or Il2cpp mods, or both?");
             emb.WithColor(Color.Blue);
             ComponentBuilder cb = new ComponentBuilder();
-            foreach(IRole r in roles)
+            SelectMenuBuilder smb = new SelectMenuBuilder()
+                .WithCustomId("role-select")
+                .WithMinValues(0)
+                .WithMaxValues(roles.Count)
+                .WithPlaceholder("Select some options");
+            foreach (IRole r in roles)
             {
-                cb.WithButton($"{r.Name}", $"{r.Id}");
+                smb.AddOption($"{r.Name}", $"{r.Id}",$"Gives you the {r.Name} role");
             }
-            await context.RespondAsync(embed: emb.Build());
+            cb.WithSelectMenu(smb);
+            await context.RespondAsync(embed: emb.Build(),components:cb.Build());
         }
     }
 }
