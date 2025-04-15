@@ -46,7 +46,21 @@ internal class TriggerCommands: Command
 							.WithAutocomplete(true)
 					)
 			)
-			.WithDescription("Triggers are effectively tags.")
+			.AddOption(
+				new SlashCommandOptionBuilder()
+					.WithName("run") // add a subcommand (/trigger run)
+					.WithDescription("Forcefully runs a trigger by its ID")
+					.WithType(ApplicationCommandOptionType.SubCommand)
+                    .AddOption(
+                        new SlashCommandOptionBuilder()
+                            .WithName("id") // Add a subcommand option (/trigger run [id])
+                            .WithDescription("The ID of the trigger to run.")
+                            .WithType(ApplicationCommandOptionType.String)
+                            .WithRequired(true)
+                            .WithAutocomplete(true)
+                    )
+			)
+            .WithDescription("Triggers are effectively tags.")
 			.Build();
 	
 	internal override string[] ModalIDs { get; set; } = [ "trigger_add", "trigger_edit" ]; // When you're working with modals, you need to specify the IDs of the modals that this command handles.
@@ -74,10 +88,21 @@ internal class TriggerCommands: Command
 			case "remove": // /trigger remove 
 				await HandleRemove(context);
 				break;
+			case "run":
+				await HandleRun(context);
+				break;
 		}
 	}
 
-	internal override async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context) // This is called when a modal is submitted, and the modal's CustomId was found in our command's ModalIDs.
+    private async Task HandleRun(SocketSlashCommand context)
+    {
+		string s = string.Empty;
+		s = Program.TriggerItems.FirstOrDefault(x => x.Id == (string)context.Data.Options.First().Options.First().Value).Response;
+		if (s == string.Empty) await context.RespondAsync("Couldn't find ID!");
+		else await context.RespondAsync(s);
+    }
+
+    internal override async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context) // This is called when a modal is submitted, and the modal's CustomId was found in our command's ModalIDs.
 	{
 		var customId = context.Data.CustomId;
 		switch (customId)

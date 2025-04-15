@@ -9,6 +9,7 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Discord.Rest;
 
 namespace NelsonsWeirdTwin;
 
@@ -125,24 +126,40 @@ internal static class Program
     private static async Task MessageReceived(SocketMessage msg)
 	{
 		// if message is sent without attachment in #mod-showoff, remove it
-		if(msg.Channel.Id == 1357125993717825667 && msg.Attachments.Count == 0)
+		if(msg.Channel.Id == 1357125993717825667 )
 		{
-			await msg.DeleteAsync();
-			// TODO: implement logic for creating a thread
+			// move inside here so i can do an else instead of an else if
+			// delete if no attachment or embed
+			if (msg.Attachments.Count == 0 && msg.Embeds.Count == 0)
+			{
+				await Task.Delay(10000); // wait 10 seconds, then recheck the embeds count
+				if (msg.Embeds.Count == 0)
+				{
+					await msg.DeleteAsync();
+				}
+			}
+			else
+			{
+				if (msg.Channel is ITextChannel c)
+				{
+					await c.CreateThreadAsync($"{msg.Author.Username}'s mod showoff thread.", message: msg);
+				}
+				else
+				{
+					await msg.Channel.SendMessageAsync("Shits null bud.");
+				}
+			}
+			
 		}
 		else if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
-			//Console.WriteLine(msg.Type);
-			//Console.WriteLine(msg.Author.IsBot);
-			//Console.WriteLine(msg.Author.IsWebhook);
-			// debugging stuff...
 			return;
 		}
 		
 		foreach (var k in TriggerItems.Where( // Select any items where...
-			         k => k.Aliases.Any( // ...any of the aliases...
-				         t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
-			         ))) {
+			        k => k.Aliases.Any( // ...any of the aliases...
+				    t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
+			        ))) {
 			await msg.Channel.SendMessageAsync(k.Response, allowedMentions: AllowedMentions.None);
 			break;
 		}
@@ -196,9 +213,9 @@ internal static class Program
 			return;
 		}
 	}
-	#endregion
-
-	internal static async Task AddNewTrigger(TriggerItem trigger) 
+    #endregion
+    #region Triggers and Command Loading
+    internal static async Task AddNewTrigger(TriggerItem trigger) 
 	{
 		TriggerItems.Add(trigger);
 		await SaveTriggers();
@@ -271,3 +288,4 @@ internal static class Program
 		}
 	}
 }
+#endregion
