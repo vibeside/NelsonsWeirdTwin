@@ -19,6 +19,7 @@ internal static class Program
 
 	public static List<TriggerItem> TriggerItems = [];
 	private static readonly List<Command> CommandsList = [];
+	private static List<ulong> watchList = [];
 
 	private static async Task Main()
 	{
@@ -49,6 +50,7 @@ internal static class Program
 		Client.Ready += OnReady;
 		
 		Client.MessageReceived += MessageReceived;
+        Client.MessageUpdated += MessageUpdated;
 
 		Client.SlashCommandExecuted += SlashCommandSubmitted;
 		Client.ModalSubmitted += ModalSubmitted;
@@ -82,8 +84,10 @@ internal static class Program
 		}
 	}
 
-	#region Events
-	private static async Task OnReady()
+   
+
+    #region Events
+    private static async Task OnReady()
 	{
 		await LoadCommands();
         RolePicker.roles.Add(Client.Guilds.First().GetRole(1359944109350981733));
@@ -122,7 +126,21 @@ internal static class Program
             await c.RespondAsync(successMessage,ephemeral: true,allowedMentions:AllowedMentions.None);
         }
     }
-
+    private static async Task MessageUpdated(Cacheable<IMessage, ulong> orig, SocketMessage updated, ISocketMessageChannel channel)
+    {
+		if (watchList.Contains(updated.Id))
+		{
+			if(updated.Embeds.Count == 0 && updated.Attachments.Count == 0)
+			{
+				watchList.Remove(updated.Id);
+				await updated.DeleteAsync();
+			}
+			else
+			{
+				watchList.Remove(updated.Id);
+			}
+		}
+    }
     private static async Task MessageReceived(SocketMessage msg)
 	{
 		// if message is sent without attachment in #mod-showoff, remove it
@@ -132,11 +150,7 @@ internal static class Program
 			// delete if no attachment or embed
 			if (msg.Attachments.Count == 0 && msg.Embeds.Count == 0)
 			{
-				await Task.Delay(10000); // wait 10 seconds, then recheck the embeds count
-				if (msg.Embeds.Count == 0)
-				{
-					await msg.DeleteAsync();
-				}
+				watchList.Add(msg.Id);
 			}
 			else
 			{
