@@ -56,6 +56,7 @@ internal static class Program
 		Client.ModalSubmitted += ModalSubmitted;
 
 		Client.SelectMenuExecuted += SelectMenuHandler;
+        Client.ButtonExecuted += Client_ButtonExecuted;
 
 		Client.AutocompleteExecuted += AutoCompleteHandler;
 		
@@ -84,7 +85,9 @@ internal static class Program
 		}
 	}
 
-   
+    
+
+
 
     #region Events
     private static async Task OnReady()
@@ -95,7 +98,20 @@ internal static class Program
         Console.WriteLine("Client is ready.");
 	}
 
-	private static async Task SelectMenuHandler(SocketMessageComponent c)
+    private static async Task Client_ButtonExecuted(SocketMessageComponent c)
+    {
+		switch (c.Data.CustomId)
+		{
+			case "vouch":
+				await ChatModApplication.HandleVouch(c);
+				break;
+			case "anti-vouch":
+				await ChatModApplication.HandleAntiVouch(c);
+				break;
+		}
+    }
+
+    private static async Task SelectMenuHandler(SocketMessageComponent c)
 	{
 		// Gave*
         SocketGuildUser u = c.User as SocketGuildUser;
@@ -128,6 +144,7 @@ internal static class Program
     }
     private static async Task MessageUpdated(Cacheable<IMessage, ulong> orig, SocketMessage updated, ISocketMessageChannel channel)
     {
+		// if it STILL has no embeds or attachments, delete.
 		if (watchList.Contains(updated.Id))
 		{
 			if(updated.Embeds.Count == 0 && updated.Attachments.Count == 0)
