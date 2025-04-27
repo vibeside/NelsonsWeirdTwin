@@ -1,15 +1,19 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Discord;
 using Discord.WebSocket;
+using Newtonsoft.Json;
 
 namespace NelsonsWeirdTwin.Commands;
 
 internal class TriggerCommands: Command
 {
-	internal override SlashCommandProperties CommandProperties => // This one's a little more advanced, but only because we have subcommands.
+    public static List<TriggerItem> TriggerItems = [];
+
+    internal override SlashCommandProperties CommandProperties => // This one's a little more advanced, but only because we have subcommands.
 		new SlashCommandBuilder()
 			.WithName("trigger") // Start off with the base (/trigger)
 			.AddOption(
@@ -97,7 +101,7 @@ internal class TriggerCommands: Command
     private async Task HandleRun(SocketSlashCommand context)
     {
 		string s = string.Empty;
-		s = Program.TriggerItems.FirstOrDefault(x => x.Id == (string)context.Data.Options.First().Options.First().Value).Response;
+		s = TriggerItems.FirstOrDefault(x => x.Id == (string)context.Data.Options.First().Options.First().Value).Response;
 		if (s == string.Empty) await context.RespondAsync("Couldn't find ID!");
 		else await context.RespondAsync(s);
     }
@@ -156,7 +160,7 @@ internal class TriggerCommands: Command
 				}
 				
 				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-				if (Program.TriggerItems.Any(t => t.Id == id)) // ...check if the trigger already exists...
+				if (TriggerItems.Any(t => t.Id == id)) // ...check if the trigger already exists...
 				{
 					await modal.RespondAsync(string.Format(AlreadyExists, id), ephemeral: true);
 					return;
@@ -176,7 +180,7 @@ internal class TriggerCommands: Command
 					return;
 				}
 
-				await Program.AddNewTrigger(new TriggerItem
+				await AddNewTrigger(new TriggerItem
 				{
 					Id = id,
 					Aliases = aliasesList,
@@ -202,7 +206,7 @@ internal class TriggerCommands: Command
 				}
 				
 				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-				var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
+				var existing = TriggerItems.FirstOrDefault(t => t.Id == id);
 				if (existing == null) // ...check if the trigger exists...
 				{
 					await command.RespondAsync(string.Format(NotFound, id), ephemeral: true);
@@ -242,15 +246,15 @@ internal class TriggerCommands: Command
 		}
 
 		tid = tid.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == tid); // ...check if the trigger exists...
+		var existing = TriggerItems.FirstOrDefault(t => t.Id == tid); // ...check if the trigger exists...
 		if (existing == null)
 		{
 			await context.RespondAsync(string.Format(NotFound, tid), ephemeral: true);
 			return;
 		}
 		
-		Program.TriggerItems.Remove(existing); // ...remove the trigger...
-		await Program.SaveTriggers(); // ...save the changes...
+		TriggerItems.Remove(existing); // ...remove the trigger...
+		await SaveTriggers(); // ...save the changes...
 		
 		await context.RespondAsync($"Removed trigger with ID `{tid}`.", ephemeral: true); // ...and respond with a status update.
 	}
@@ -266,14 +270,14 @@ internal class TriggerCommands: Command
 		var currentValue = context.Data.Current.Value.ToString();
 		if(string.IsNullOrEmpty(currentValue))
 		{
-			await context.RespondAsync(Program.TriggerItems
+			await context.RespondAsync(TriggerItems
 				.Select(k => new AutocompleteResult(k.Id, k.Id))
 				.Take(25)
 				.ToList());
 			return;
 		}
 		
-		var options = Program.TriggerItems
+		var options = TriggerItems
 			.Where(k => k.Id.Contains(currentValue, StringComparison.CurrentCultureIgnoreCase))
 			.Select(k => new AutocompleteResult(k.Id, k.Id))
 			.Take(25)
@@ -300,7 +304,7 @@ internal class TriggerCommands: Command
 		}
 		
 		id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
-		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
+		var existing = TriggerItems.FirstOrDefault(t => t.Id == id);
 		if (existing == null) // ...check if the trigger exists...
 		{
 			await context.RespondAsync(string.Format(NotFound, id), ephemeral: true);
@@ -321,8 +325,8 @@ internal class TriggerCommands: Command
 			return;
 		}
 
-		Program.TriggerItems.RemoveAll(t => t.Id == id); // ...remove the old trigger...
-		await Program.AddNewTrigger(new TriggerItem
+		TriggerItems.RemoveAll(t => t.Id == id); // ...remove the old trigger...
+		await AddNewTrigger(new TriggerItem
 		{
 			Id = id,
 			Aliases = aliasesList,
@@ -333,10 +337,43 @@ internal class TriggerCommands: Command
 	}
 	private List<string> CheckForConflicts(List<string> toBeAddedAliases)
 	{
-		return toBeAddedAliases.Where(a => Program.TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase))).ToList(); // ...check if any of the aliases already exist...
+		return toBeAddedAliases.Where(a => TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase))).ToList(); // ...check if any of the aliases already exist...
 	}
 	private List<string> CheckForConflicts(List<string> toBeAddedAliases, string myID)
 	{
-		return toBeAddedAliases.Where(a => Program.TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase) && t.Id != myID)).ToList(); // ...check if any of the aliases already exist...
+		return toBeAddedAliases.Where(a => TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.CurrentCultureIgnoreCase) && t.Id != myID)).ToList(); // ...check if any of the aliases already exist...
 	}
+    internal static async Task AddNewTrigger(TriggerItem trigger)
+    {
+        TriggerItems.Add(trigger);
+        await SaveTriggers();
+    }
+
+    internal static async Task TryLoadTriggers()
+    {
+        try
+        {
+            TriggerItems =
+                JsonConvert.DeserializeObject<List<TriggerItem>>(await File.ReadAllTextAsync("triggers.json"));
+        }
+        catch (FileNotFoundException)
+        {
+            Console.WriteLine("Triggers file not found. Creating a new one.");
+            await SaveTriggers();
+        }
+        catch (JsonException)
+        {
+            Console.WriteLine("Triggers file is corrupted. Creating a new one.");
+            await SaveTriggers();
+        }
+        catch (Exception e)
+        {
+            Console.WriteLine($"An error occurred while loading triggers: {e.Message}");
+        }
+    }
+
+    internal static async Task SaveTriggers()
+    {
+        await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggerItems, Formatting.Indented));
+    }
 }
