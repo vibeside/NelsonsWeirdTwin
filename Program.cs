@@ -12,8 +12,15 @@ using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin;
 
+// TODO:
+// Warns JSONDB
+// Warn clearing when banned into discord chat(ID:1366470152727560233)
+// Expired warns var
+// user specific commands
+
 internal static class Program
 {
+	public static bool BotActive = true;
 	public static DiscordSocketClient Client;
 
 	public static List<TriggerItem> TriggerItems = [];
@@ -70,15 +77,16 @@ internal static class Program
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
 		
-		while (true)
+		while (BotActive)
 		{
 			switch (Console.ReadLine())
 			{
 				case "ex":
+					BotActive = false;
 					await Client.StopAsync();
 					await Client.LogoutAsync();
-
-					return;
+					SaveTriggers();
+					break;
 				case "u":
 					await TryLoadTriggers();
 					break;

@@ -25,8 +25,10 @@ namespace NelsonsWeirdTwin.Commands
                 return;
             }
             await context.RespondAsync("eugh im dying ah");
+            Program.BotActive = false;
             await Program.Client.StopAsync();
             await Program.Client.LogoutAsync();
+            Program.SaveTriggers();
         }
     }
 }
