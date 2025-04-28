@@ -22,19 +22,6 @@ internal static class Events
 		return Task.CompletedTask;
 	}
 
-	internal static async Task ButtonExecutionHandler(SocketMessageComponent c)
-	{
-		switch (c.Data.CustomId)
-		{
-			case "vouch":
-				await ChatModApplication.HandleVouch(c);
-				break;
-			case "anti-vouch":
-				await ChatModApplication.HandleAntiVouch(c);
-				break;
-		}
-	}
-
 	internal static async Task SelectMenuHandler(SocketMessageComponent c)
 	{
 		if (c.User is not SocketGuildUser u) await c.RespondAsync("Couldn't find user");

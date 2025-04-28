@@ -64,10 +64,7 @@ internal static class Program
 
 		Client.SlashCommandExecuted += Events.SlashCommandSubmit;
 		Client.ModalSubmitted += Events.ModalSubmit;
-
 		Client.SelectMenuExecuted += Events.SelectMenuHandler;
-		Client.ButtonExecuted += Events.ButtonExecutionHandler;
-
 		Client.AutocompleteExecuted += Events.AutoCompleteHandler;
 		
 		await Client.LoginAsync(TokenType.Bot, token);
