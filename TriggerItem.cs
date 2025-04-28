@@ -10,4 +10,6 @@ public record TriggerItem
 	
 	public List<string> Aliases { get; set; } = [];
 	public string Response { get; set; } = string.Empty;
+
+	public int TimesTriggered { get; set; } = 0;
 }

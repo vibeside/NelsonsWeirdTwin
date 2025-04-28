@@ -1,0 +1,32 @@
+﻿using Discord;
+using Discord.WebSocket;
+using NelsonsWeirdTwin.Commands;
+using System;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Threading.Tasks;
+
+namespace NelsonsWeirdTwin
+{
+    internal class KillBot : Command
+    {
+        internal override SlashCommandProperties CommandProperties =>
+        new SlashCommandBuilder()
+            .WithName("killbot")
+            .WithDescription("KILL THE BOT MUAHAHAHAHAHA")
+            .Build();
+
+        internal async override Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
+        {
+            await context.DeferAsync();
+            if (Program.OwnerIDs.Select(id => (ulong)id).All(id => id != context.User.Id))
+            {
+                await context.DeleteOriginalResponseAsync();
+                return;
+            }
+            await Program.Client.StopAsync();
+            await Program.Client.LogoutAsync();
+        }
+    }
+}

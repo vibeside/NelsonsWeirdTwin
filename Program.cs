@@ -20,13 +20,13 @@ internal static class Program
 	internal static readonly List<Command> CommandsList = [];
 	internal static readonly List<ulong> WatchList = [];
 
-	internal static readonly long[] OwnerIDs =
+	internal static readonly ulong[] OwnerIDs =
 	[
 		939127707034333224, // @stupidrepo
 		1295119273030586471, // @coolpaca
 	];
 
-	internal static readonly long[] IgnoringPeopleWhoHaveTheseRoleIDs =
+	internal static readonly ulong[] IgnoredRoleIds =
 	[
 		1366191861194293279,
 		1366213334587801650

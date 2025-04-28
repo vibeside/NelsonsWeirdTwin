@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -95,10 +96,17 @@ internal class PurgeCommand : Command
 			await context.ModifyOriginalMessageAsync(awesomeSb.ToString(), 2500);
 			return;
 		}
+		var purgeHeading = new StringBuilder();
+		purgeHeading.Append("==================================================================\n");
+        purgeHeading.Append($"Removed {amountToPurge} {Utils.Plural(amountToPurge, "message", "messages")} at {DateTime.UtcNow}\n");
+		purgeHeading.Append($"Command ran by: {context.User.GlobalName}({context.User.Mention})\n");
+		purgeHeading.Append("==================================================================\n");
 		
-		await channel.DeleteMessagesAsync(messagesToPurge);
-
-		var sb = new StringBuilder();
+		await channel.DeleteMessagesAsync(messagesToPurge); 
+        messagesToPurge.Reverse();
+        messagesToPurge.ForEach(msg => purgeHeading.Append($"{msg.Author.GlobalName}({msg.Author.Mention}): {msg.CleanContent}\n"));
+        File.AppendAllText("PurgeLog.txt", purgeHeading.ToString());
+        var sb = new StringBuilder();
 		sb.AppendLine($"Purged {amountToPurge} {Utils.Plural(amountToPurge, "message", "messages")} from {channel.Mention}.");
 		if(tooOld > 0) sb.Append($"-# {tooOld} {Utils.Plural(tooOld, "message", "messages")}, of which are too old to be purged, were ignored.");
 		

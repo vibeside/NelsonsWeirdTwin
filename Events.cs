@@ -15,9 +15,11 @@ internal static class Events
 		_ = Task.Run(async () => await Program.LoadCommands()); // Load commands in the background to stop
 		// Discord.Net complaining about the Ready handler blocking the gateway task
 	    
+		//
 		RolePicker.roles.Add(Program.Client.Guilds.First().GetRole(1359944109350981733));
 		RolePicker.roles.Add(Program.Client.Guilds.First().GetRole(1359943967810256896));
-		Console.WriteLine("Client is ready!");
+        RolePicker.roles.Add(Program.Client.Guilds.First().GetRole(1366191861194293279));
+        Console.WriteLine("Client is ready!");
 
 		return Task.CompletedTask;
 	}
@@ -91,7 +93,7 @@ internal static class Events
 		}
 		
 		if (msg.Author is not SocketGuildUser user) return;
-		if (user.Roles.Any(role => Program.IgnoringPeopleWhoHaveTheseRoleIDs.ToList().Contains((long)role.Id)))
+		if (user.Roles.Any(role => Program.IgnoredRoleIds.ToList().Contains(role.Id)))
 		{
 			return;
 		}
@@ -103,7 +105,7 @@ internal static class Events
 			var sb = new StringBuilder();
 			sb.AppendLine(k.Response);
 			sb.AppendLine($"-# ID: `{k.Id}` • Triggered by {string.Join(", ", triggers.Select(x => $"`{x}`"))}.");
-			
+			k.TimesTriggered += 1;
 			await msg.Channel.SendMessageAsync(sb.ToString(), allowedMentions: AllowedMentions.None);
 			break;
 		}
@@ -111,27 +113,30 @@ internal static class Events
 
 	internal static async Task SlashCommandSubmit(SocketSlashCommand command)
 	{
-		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
+		if (command.User is { IsBot: true } or { IsWebhook: true }) return;
 		var commandName = command.Data.Name;
-		
+
 		foreach (var cmd in Program.CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
 		{
-			try
+		    Task.Run(async () =>
 			{
-				await cmd.OnExecuted(Program.Client, command);
-			} catch (Exception e)
-			{
-				Console.WriteLine($"An error occurred while executing command \"{commandName}\"!");
-				Console.WriteLine(e);
-				
-				await command.ModifyOriginalResponseAsync(properties =>
+				try
 				{
-					properties.Content = $"An error occurred while executing command \"{commandName}\":\n```\n{e.Message}\n```";
-				});
-			}
+					await cmd.OnExecuted(Program.Client, command);
+				}
+				catch (Exception e)
+				{
+					Console.WriteLine($"An error occurred while executing command \"{commandName}\"!");
+					Console.WriteLine(e);
+
+					await command.ModifyOriginalResponseAsync(properties =>
+					{
+						properties.Content = $"An error occurred while executing command \"{commandName}\":\n```\n{e.Message}\n```";
+					});
+				}
+			});
 			return;
-		}
-		
+	}
 		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
 	}
 
