@@ -9,7 +9,6 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using Discord.Rest;
 
 namespace NelsonsWeirdTwin;
 
@@ -18,9 +17,21 @@ internal static class Program
 	public static DiscordSocketClient Client;
 
 	public static List<TriggerItem> TriggerItems = [];
-	private static readonly List<Command> CommandsList = [];
-	private static List<ulong> watchList = [];
+	internal static readonly List<Command> CommandsList = [];
+	internal static readonly List<ulong> WatchList = [];
 
+	internal static readonly long[] OwnerIDs =
+	[
+		939127707034333224, // @stupidrepo
+		1295119273030586471, // @coolpaca
+	];
+
+	internal static readonly long[] IgnoringPeopleWhoHaveTheseRoleIDs =
+	[
+		1366191861194293279,
+		1366213334587801650
+	];
+	
 	private static async Task Main()
 	{
 		Env.Load("token.env");
@@ -41,26 +52,25 @@ internal static class Program
 		};
 		Client = new DiscordSocketClient(config);
 
-
 		Client.Log += message =>
 		{
 			Console.WriteLine(message.Message);
 			return Task.CompletedTask;
 		};
-		Client.Ready += OnReady;
+		Client.Ready += Events.OnReady;
 		
-		Client.MessageReceived += MessageReceived;
-        Client.MessageUpdated += MessageUpdated;
+		Client.MessageReceived += Events.MessageReceived;
+		Client.MessageUpdated += Events.MessageUpdated;
 
-		Client.SlashCommandExecuted += SlashCommandSubmitted;
-		Client.ModalSubmitted += ModalSubmitted;
+		Client.SlashCommandExecuted += Events.SlashCommandSubmit;
+		Client.ModalSubmitted += Events.ModalSubmit;
 
-		Client.SelectMenuExecuted += SelectMenuHandler;
-        Client.ButtonExecuted += Client_ButtonExecuted;
+		Client.SelectMenuExecuted += Events.SelectMenuHandler;
+		Client.ButtonExecuted += Events.ButtonExecutionHandler;
 
-		Client.AutocompleteExecuted += AutoCompleteHandler;
+		Client.AutocompleteExecuted += Events.AutoCompleteHandler;
 		
-        await Client.LoginAsync(TokenType.Bot, token);
+		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
 		
 		while (true)
@@ -84,169 +94,9 @@ internal static class Program
 			}
 		}
 	}
-
-    
-
-
-
-    #region Events
-    private static async Task OnReady()
-	{
-		await LoadCommands();
-        RolePicker.roles.Add(Client.Guilds.First().GetRole(1359944109350981733));
-        RolePicker.roles.Add(Client.Guilds.First().GetRole(1359943967810256896));
-        Console.WriteLine("Client is ready.");
-	}
-
-    private static async Task Client_ButtonExecuted(SocketMessageComponent c)
-    {
-		switch (c.Data.CustomId)
-		{
-			case "vouch":
-				await ChatModApplication.HandleVouch(c);
-				break;
-			case "anti-vouch":
-				await ChatModApplication.HandleAntiVouch(c);
-				break;
-		}
-    }
-
-    private static async Task SelectMenuHandler(SocketMessageComponent c)
-	{
-		// Gave*
-        SocketGuildUser u = c.User as SocketGuildUser;
-		if (u == null) await c.RespondAsync("Couldn't find user");
-		else
-		{
-			// Gave*user*the
-            // Acceptable roles:
-            // Mono
-            // Il2Cpp
-			List<IRole> chosenRoles = RolePicker.roles.Where(r => c.Data.Values.Contains(r.Id.ToString())).ToList();
-			List<IRole> removedRoles = RolePicker.roles.Where(r => !c.Data.Values.Contains(r.Id.ToString())).ToList();
-			// foreach role in chosen roles
-			string chosenRolesJoined = string.Join(", ", chosenRoles.ConvertAll(x => $"<@&{x.Id}>"));
-			string removedRolesJoined = string.Join(", ", removedRoles.ConvertAll(x => $"<@&{x.Id}>"));
-
-			string addedRolesPart = chosenRoles.Count == 0 
-				? "Didn't give any roles" 
-				: $"Gave {u.Username} the roles {chosenRolesJoined}";
-
-			string removedRolesPart = removedRoles.Count == 0
-				? ""
-				: $"and removed the roles {removedRolesJoined}";
-
-            string successMessage = $"{addedRolesPart} {removedRolesPart}";
-			await u.RemoveRolesAsync(removedRoles);
-            await u.AddRolesAsync(chosenRoles);
-            await c.RespondAsync(successMessage,ephemeral: true,allowedMentions:AllowedMentions.None);
-        }
-    }
-    private static async Task MessageUpdated(Cacheable<IMessage, ulong> orig, SocketMessage updated, ISocketMessageChannel channel)
-    {
-		// if it STILL has no embeds or attachments, delete.
-		if (watchList.Contains(updated.Id))
-		{
-			if(updated.Embeds.Count == 0 && updated.Attachments.Count == 0)
-			{
-				watchList.Remove(updated.Id);
-				await updated.DeleteAsync();
-			}
-			else
-			{
-				watchList.Remove(updated.Id);
-			}
-		}
-    }
-    private static async Task MessageReceived(SocketMessage msg)
-	{
-		// if message is sent without attachment in #mod-showoff, remove it
-		if(msg.Channel.Id == 1357125993717825667 )
-		{
-			// move inside here so i can do an else instead of an else if
-			// delete if no attachment or embed
-			if (msg.Attachments.Count == 0 && msg.Embeds.Count == 0)
-			{
-				watchList.Add(msg.Id);
-			}
-			else
-			{
-				if (msg.Channel is ITextChannel c)
-				{
-					await c.CreateThreadAsync($"{msg.Author.Username}'s mod showoff thread.", message: msg);
-				}
-				else
-				{
-					await msg.Channel.SendMessageAsync("Shits null bud.");
-				}
-			}
-			
-		}
-		else if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
-		{
-			return;
-		}
-		
-		foreach (var k in TriggerItems.Where( // Select any items where...
-			        k => k.Aliases.Any( // ...any of the aliases...
-				    t => msg.Content.Contains(t, StringComparison.CurrentCultureIgnoreCase) // ...are in the message.
-			        ))) {
-			await msg.Channel.SendMessageAsync(k.Response, allowedMentions: AllowedMentions.None);
-			break;
-		}
-	}
-	private static async Task SlashCommandSubmitted(SocketSlashCommand command)
-	{
-		if(command.User is { IsBot: true } or { IsWebhook: true }) return;
-		var commandName = command.Data.Name;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
-		{
-			try
-			{
-				await cmd.OnExecuted(Client, command);
-			} catch (Exception e)
-			{
-				Console.WriteLine($"An error occurred while executing command \"{commandName}\"!");
-				Console.WriteLine(e);
-				
-				await command.ModifyOriginalResponseAsync(properties =>
-				{
-					properties.Content = $"An error occurred while executing command \"{commandName}\":\n```\n{e.Message}\n```";
-				});
-			}
-			return;
-		}
-		
-		await command.RespondAsync($"Command \"{commandName}\" not found. What the flip flop is happening here?!");
-	}
-	private static async Task ModalSubmitted(SocketModal modal)
-	{
-		if (modal.User is { IsBot: true } or { IsWebhook: true }) return;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
-		{
-			await cmd.OnModalSubmitted(Client, modal);
-			return;
-		}
-		
-		await modal.RespondAsync($"Modal {modal.Data.CustomId} not found!");
-	}
-
-	private static async Task AutoCompleteHandler(SocketAutocompleteInteraction context)
-	{
-		if(context.User is { IsBot: true } or { IsWebhook: true }) return;
-		var commandName = context.Data.CommandName;
-		
-		foreach (var cmd in CommandsList.Where(cmd => cmd.CommandProperties.Name.Value == commandName))
-		{
-			await cmd.OnAutocompleteResultsRequested(Client, context);
-			return;
-		}
-	}
-    #endregion
-    #region Triggers and Command Loading
-    internal static async Task AddNewTrigger(TriggerItem trigger) 
+	
+	#region Triggers and Command Loading
+	internal static async Task AddNewTrigger(TriggerItem trigger) 
 	{
 		TriggerItems.Add(trigger);
 		await SaveTriggers();
@@ -278,8 +128,8 @@ internal static class Program
 	{
 		await File.WriteAllTextAsync("triggers.json", JsonConvert.SerializeObject(TriggerItems, Formatting.Indented));
 	}
-	
-	private static async Task LoadCommands()
+
+	internal static async Task LoadCommands(bool reregister = false)
 	{
 		var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
 		var types = assembly.GetTypes() // ...get all types...
@@ -293,6 +143,7 @@ internal static class Program
 			return;
 		}
 
+		CommandsList.Clear();
 		foreach (var type in types)
 		{
 			var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
@@ -308,15 +159,22 @@ internal static class Program
 		}
 
 		Console.WriteLine(
-			$"Loaded {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
+			$"Found {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
 
-		foreach (var command in CommandsList)
+		var guild = Client.GetGuild(1349221936470687764); // S1 Modding
+		guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
+
+		if (reregister)
 		{
-			var guild = Client.GetGuild(1349221936470687764); // S1 Modding
-			guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
-
-			await command.RegisterCommand(Client, guild);
+			await Client.BulkOverwriteGlobalApplicationCommandsAsync([]);
+			await guild.DeleteApplicationCommandsAsync();
+			
+			Console.WriteLine("Deleted all commands. Re-registering in 5 seconds...");
+			await Task.Delay(5000);
 		}
+		
+		await guild.BulkOverwriteApplicationCommandAsync(CommandsList.Select(c => c.CommandProperties).ToArray<ApplicationCommandProperties>());
+		Console.WriteLine($"Finished registering {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}!");
 	}
 }
 #endregion

@@ -1,9 +1,7 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Text;
 using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin.Commands
@@ -49,7 +47,7 @@ namespace NelsonsWeirdTwin.Commands
         public static ulong rolepickerchannel = 0;
         internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
         {
-            string subcommand = context.Data.Options.First().Name;
+            var subcommand = context.Data.Options.First().Name;
             switch (subcommand)
             {
                 case "add":
@@ -69,7 +67,7 @@ namespace NelsonsWeirdTwin.Commands
 
         public static async Task HandleAdd(SocketSlashCommand context)
         {
-            IRole r = context.Data.Options.First().Options.First()?.Value as IRole;
+            var r = context.Data.Options.First().Options.First()?.Value as IRole;
             if (r != null)
             {
                 roles.Add(r);
@@ -84,7 +82,7 @@ namespace NelsonsWeirdTwin.Commands
         }
         public static async Task HandleRemove(SocketSlashCommand context)
         {
-            IRole r = context.Data.Options.First().Options.First()?.Value as IRole;
+            var r = context.Data.Options.First().Options.First()?.Value as IRole;
             if (r != null)
             {
                 roles.Remove(r);
@@ -98,17 +96,17 @@ namespace NelsonsWeirdTwin.Commands
         public static async Task HandleSet(SocketSlashCommand context)
         {
             rolepickerchannel = context.Channel.Id;
-            EmbedBuilder emb = new EmbedBuilder();
+            var emb = new EmbedBuilder();
             emb.WithTitle("Role picker");
             emb.WithDescription("Do you plan on making Mono mods, or Il2cpp mods, or both?");
             emb.WithColor(Color.Blue);
-            ComponentBuilder cb = new ComponentBuilder();
-            SelectMenuBuilder smb = new SelectMenuBuilder()
+            var cb = new ComponentBuilder();
+            var smb = new SelectMenuBuilder()
                 .WithCustomId("role-select")
                 .WithMinValues(0)
                 .WithMaxValues(roles.Count)
                 .WithPlaceholder("Select some options");
-            foreach (IRole r in roles)
+            foreach (var r in roles)
             {
                 smb.AddOption($"{r.Name}", $"{r.Id}",$"Gives you the {r.Name} role");
             }
