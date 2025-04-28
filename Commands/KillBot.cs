@@ -1,13 +1,12 @@
 ﻿using Discord;
 using Discord.WebSocket;
-using NelsonsWeirdTwin.Commands;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
-namespace NelsonsWeirdTwin
+namespace NelsonsWeirdTwin.Commands
 {
     internal class KillBot : Command
     {
@@ -20,7 +19,7 @@ namespace NelsonsWeirdTwin
         internal async override Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
         {
             await context.DeferAsync();
-            if (Program.OwnerIDs.Select(id => (ulong)id).All(id => id != context.User.Id))
+            if (Program.OwnerIDs.Select(id => id).All(id => id != context.User.Id))
             {
                 await context.DeleteOriginalResponseAsync();
                 return;
