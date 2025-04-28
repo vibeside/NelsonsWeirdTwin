@@ -67,7 +67,6 @@ internal static class Program
 		Client.Ready += Events.OnReady;
 		
 		Client.MessageReceived += Events.MessageReceived;
-		Client.MessageUpdated += Events.MessageUpdated;
 
 		Client.SlashCommandExecuted += Events.SlashCommandSubmit;
 		Client.ModalSubmitted += Events.ModalSubmit;

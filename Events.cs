@@ -1,4 +1,5 @@
 using System;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -71,23 +72,37 @@ internal static class Events
 
 	internal static async Task MessageReceived(SocketMessage msg)
 	{
+		async Task CheckMessageSoon(SocketMessage checkedMessage)
+		{
+			await Task.Delay(5000);
+			if (!Program.WatchList.Contains(checkedMessage.Id)) return;
+            if (checkedMessage.Embeds.Count == 0 && checkedMessage.Attachments.Count == 0)
+            {
+                Program.WatchList.Remove(checkedMessage.Id);
+                await checkedMessage.DeleteAsync();
+            }
+            else
+            {
+                Program.WatchList.Remove(checkedMessage.Id);
+            }
+        }
 		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
 			return;
 		}
 		
-		if(msg.Channel.Id is 1357125993717825667 or 1360078197609201785)
+		if(msg.Channel.Id is 1363500762780664070 or 1360078197609201785)
 		{
 			if (msg.Attachments.Count == 0 && msg.Embeds.Count == 0)
 			{
 				Program.WatchList.Add(msg.Id);
+				Task.Run(async () => await CheckMessageSoon(msg));
 			}
 			else
 			{
 				var channel = (ITextChannel)msg.Channel; // using 'is not' causes problems, I've noticed
 				if (channel == null) return;
 				
-				Program.WatchList.Remove(msg.Id);
 				await channel.CreateThreadAsync($"{msg.Author.Username}'s mod showoff thread.", message: msg);
 			}
 		}
