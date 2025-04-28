@@ -24,6 +24,7 @@ namespace NelsonsWeirdTwin.Commands
                 await context.DeleteOriginalResponseAsync();
                 return;
             }
+            await context.RespondAsync("eugh im dying ah");
             await Program.Client.StopAsync();
             await Program.Client.LogoutAsync();
         }

@@ -54,20 +54,38 @@ internal class TriggerCommands: Command
 					.WithName("run") // Add a subcommand (/trigger run)
 					.WithDescription("Send a trigger's output to the channel.")
 					.WithType(ApplicationCommandOptionType.SubCommand)
-                    .AddOption(
-                        new SlashCommandOptionBuilder()
-                            .WithName("id") // Add a subcommand option (/trigger run [id])
-                            .WithDescription("The ID of the trigger to run.")
-                            .WithType(ApplicationCommandOptionType.String)
-                            .WithRequired(true)
-                            .WithAutocomplete(true)
-                    )
+					.AddOption(
+						new SlashCommandOptionBuilder()
+							.WithName("id") // Add a subcommand option (/trigger run [id])
+							.WithDescription("The ID of the trigger to run.")
+							.WithType(ApplicationCommandOptionType.String)
+							.WithRequired(true)
+							.WithAutocomplete(true)
+					)
 					.AddOption(
 						new SlashCommandOptionBuilder()
 							.WithName("reply-to") // Add a subcommand option (/trigger run [id] [reply-to*])
 							.WithDescription("The message to reply to.")
 							.WithType(ApplicationCommandOptionType.String)
 							.WithRequired(false)
+					)
+			)
+			.AddOption(
+				new SlashCommandOptionBuilder()
+					.WithName("leaderboard")
+					.WithDescription("Leader board sub commands(listall,top5)")
+					.WithType(ApplicationCommandOptionType.SubCommandGroup)
+					.AddOption(
+						new SlashCommandOptionBuilder()
+							.WithName("topfive")
+							.WithDescription("Lists the top five triggered phrases")
+							.WithType(ApplicationCommandOptionType.SubCommand)
+					)
+					.AddOption(
+						new SlashCommandOptionBuilder()
+							.WithName("listall")
+							.WithDescription("Lists the entire leaderboard of triggered items")
+							.WithType(ApplicationCommandOptionType.SubCommand)
 					)
 			)
             .WithDescription("Triggers are effectively tags.")
@@ -101,9 +119,25 @@ internal class TriggerCommands: Command
 			case "run":
 				await HandleRun(context);
 				break;
+			case "leaderboard":
+				await HandleLeaderboard(context);
+				break;
 		}
 	}
-
+	internal async Task HandleLeaderboard(SocketSlashCommand context)
+	{
+		int amountToList = 0;
+		StringBuilder sb = new();
+		sb.Append("Here's the leaderboard for the trigger list:\n");
+		amountToList = context.Data.Options.First().Options.First().Name == "topfive" ? 5 : Program.TriggerItems.Count;
+		List<TriggerItem> copy = [.. Program.TriggerItems.OrderByDescending(x => x.TimesTriggered)];
+		for (int i = 0; i < amountToList; i++)
+		{
+			if (copy[i] == null) continue;
+			sb.Append($"{i + 1}. {copy[i].Id} | {copy[i].TimesTriggered}\n");
+		}
+		await context.RespondAsync(sb.ToString());
+	}
     internal override async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context) // This is called when a modal is submitted, and the modal's CustomId was found in our command's ModalIDs.
 	{
 		var customId = context.Data.CustomId;
