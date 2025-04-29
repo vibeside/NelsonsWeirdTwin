@@ -43,7 +43,7 @@ namespace NelsonsWeirdTwin.Commands
         internal async override Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
         {
             await context.DeferAsync();
-            if (Program.OwnerIDs.Select(id => id).All(id => id != context.User.Id))
+            if (1295119273030586471 == context.User.Id)
             {
                 await context.DeleteOriginalResponseAsync();
                 return;
