@@ -13,6 +13,7 @@ namespace NelsonsWeirdTwin.Commands
 {
     internal class HelperCommands : Command
     {
+        // 28 is shutdown, 69 is update.
         internal static byte[] exitCodes = [69,28];
         internal override SlashCommandProperties CommandProperties =>
         new SlashCommandBuilder()
