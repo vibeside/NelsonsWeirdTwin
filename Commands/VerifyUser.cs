@@ -1,6 +1,9 @@
 ﻿using Discord;
 using Discord.WebSocket;
+using System;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin.Commands
@@ -21,7 +24,9 @@ namespace NelsonsWeirdTwin.Commands
         
 		internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
 		{
-			if (context.Data.Options.First().Value is SocketGuildUser user)
+			StringBuilder v = new StringBuilder();
+            
+            if (context.Data.Options.First().Value is SocketGuildUser user)
 			{
 				// magic number for unverified
 				// 1354831227152109590
@@ -29,10 +34,14 @@ namespace NelsonsWeirdTwin.Commands
 				// 1357079958954049717
 				await user.AddRoleAsync(1357079958954049717);
 				await user.RemoveRoleAsync(1354831227152109590);
-                
+                v.Append("==================================================================\n");
+                v.Append($"Verified {user.GlobalName} ({user.Mention}) at {DateTime.UtcNow}\n");
+                v.Append($"Command ran by: {context.User.GlobalName} ({context.User.Mention})\n");
+                v.Append("==================================================================\n");
 				await context.RespondAsync($"<@{user.Id}> has been marked as verified!", ephemeral: true);
+				File.AppendAllText("VerifyLog.txt", v.ToString());
 				return;
-			}
+            }
             
 			await context.RespondAsync("Couldn't find user!", ephemeral:true);
 		}
