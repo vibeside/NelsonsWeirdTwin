@@ -68,7 +68,7 @@ namespace NelsonsWeirdTwin.Commands
             await Program.Client.StopAsync();
             Program.SaveTriggers();
             await Task.Delay(1000);
-            Environment.Exit((int)exitCode);
+            Environment.Exit(1337);
         }
         internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
         {
