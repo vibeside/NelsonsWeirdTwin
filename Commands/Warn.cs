@@ -19,6 +19,8 @@ namespace NelsonsWeirdTwin.Commands
                 new SlashCommandOptionBuilder()
                 .WithName("user")
                 .WithDescription("User to warn")
+                .WithType(ApplicationCommandOptionType.User)
+                .WithRequired(true)
                 )
             .Build();
     }
