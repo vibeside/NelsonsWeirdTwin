@@ -100,12 +100,12 @@ internal class PurgeCommand : Command
 		var purgeHeading = new StringBuilder();
 		purgeHeading.Append("==================================================================\n");
         purgeHeading.Append($"Removed {amountToPurge} {Utils.Plural(amountToPurge, "message", "messages")} at {DateTime.UtcNow}\n");
-		purgeHeading.Append($"Command ran by: {context.User.GlobalName}({context.User.Mention})\n");
+		purgeHeading.Append($"Command ran by: {context.User.GlobalName} ({context.User.Mention})\n");
 		purgeHeading.Append("==================================================================\n");
 		
 		await channel.DeleteMessagesAsync(messagesToPurge); 
         messagesToPurge.Reverse();
-        messagesToPurge.ForEach(msg => purgeHeading.Append($"{msg.Author.GlobalName}({msg.Author.Mention}): {msg.CleanContent}\n"));
+        messagesToPurge.ForEach(msg => purgeHeading.Append($"{msg.Author.GlobalName} ({msg.Author.Mention}): {msg.CleanContent}\n"));
         File.AppendAllText("PurgeLog.txt", purgeHeading.ToString());
         var sb = new StringBuilder();
 		sb.AppendLine($"Purged {amountToPurge} {Utils.Plural(amountToPurge, "message", "messages")} from {channel.Mention}.");
