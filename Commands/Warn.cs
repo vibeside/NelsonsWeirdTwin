@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.WebSocket;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -23,5 +24,9 @@ namespace NelsonsWeirdTwin.Commands
                 .WithRequired(true)
                 )
             .Build();
+        internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
+        {
+            await Task.Delay(5);
+        }
     }
 }
