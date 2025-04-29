@@ -28,6 +28,8 @@ namespace NelsonsWeirdTwin.Commands
                             .WithName("exitcode")
                             .WithDescription("Used to determine what the bot does upon being closed.")
                             .WithType(ApplicationCommandOptionType.Integer)
+                            .WithRequired(true)
+                            .WithAutocomplete(true)
                     )
             )
             .AddOption(
@@ -60,7 +62,7 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal async Task Killbot(SocketSlashCommand context)
         {
-            uint exitCode = (uint)context.Data.Options.First().Options.First().Value;
+            long exitCode = (long)context.Data.Options.First().Options.First().Value;
             await context.ModifyOriginalMessageAsync("eugh im dying ah");
             await Program.Client.LogoutAsync();
             await Program.Client.StopAsync();
