@@ -96,7 +96,7 @@ internal class PurgeCommand : Command
 			await context.ModifyOriginalMessageAsync(awesomeSb.ToString(), 2500);
 			return;
 		}
-		// test bruhhh
+
 		var purgeHeading = new StringBuilder();
 		purgeHeading.Append("==================================================================\n");
         purgeHeading.Append($"Removed {amountToPurge} {Utils.Plural(amountToPurge, "message", "messages")} at {DateTime.UtcNow}\n");
