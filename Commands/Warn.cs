@@ -9,6 +9,8 @@ namespace NelsonsWeirdTwin.Commands
 {
     internal class Warn : Command
     {
+        // TODO Warn JSON
+        // TODO Warn Logic
         internal override SlashCommandProperties CommandProperties =>
             new SlashCommandBuilder()
             .WithName("warn")
