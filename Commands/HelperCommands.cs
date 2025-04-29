@@ -60,13 +60,13 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal async Task Killbot(SocketSlashCommand context)
         {
-            int exitCode = (int)context.Data.Options.First().Options.First().Value;
+            uint exitCode = (uint)context.Data.Options.First().Options.First().Value;
             await context.ModifyOriginalMessageAsync("eugh im dying ah");
             await Program.Client.LogoutAsync();
             await Program.Client.StopAsync();
             Program.SaveTriggers();
             await Task.Delay(1000);
-            Environment.Exit(exitCode);
+            Environment.Exit((int)exitCode);
         }
         internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
         {
