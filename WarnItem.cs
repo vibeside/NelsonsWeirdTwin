@@ -7,9 +7,25 @@ using System.Threading.Tasks;
 
 namespace NelsonsWeirdTwin
 {
+    public class Warn
+    {
+        public string Reason = "";
+        public long Timestamp = 0;
+        public long IssuerID = 0;
+        public Warn(string reason, long timestamp, long issuer)
+        {
+            Reason = reason;
+            Timestamp = timestamp;
+            IssuerID = issuer;
+        }
+    }
     [Serializable]
     public record WarnItem
     {
-        public int ExpiredWarnsCount { get; set; } = 0;
+        public long User { get; set; } = 0;
+        public List<Warn> CurrentWarns { get; set; } = [];
+
+        public uint ExpiredWarns {  get; set; } = 0;
+
     }
 }

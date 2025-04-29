@@ -43,6 +43,6 @@ namespace NelsonsWeirdTwin.Commands
             }
             
 			await context.RespondAsync("Couldn't find user!", ephemeral:true);
-		}
+		} 
 	}
 }
