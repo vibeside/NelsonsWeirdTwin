@@ -13,7 +13,7 @@ namespace NelsonsWeirdTwin.Commands
 {
     internal class HelperCommands : Command
     {
-        internal static int[] exitCodes = [2005,1337];
+        internal static byte[] exitCodes = [69,28];
         internal override SlashCommandProperties CommandProperties =>
         new SlashCommandBuilder()
             .WithName("helper")
@@ -68,7 +68,7 @@ namespace NelsonsWeirdTwin.Commands
             await Program.Client.StopAsync();
             Program.SaveTriggers();
             await Task.Delay(1000);
-            Environment.Exit(1337);
+            Environment.Exit((byte)exitCode);
         }
         internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
         {
