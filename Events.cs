@@ -11,9 +11,17 @@ namespace NelsonsWeirdTwin;
 
 internal static class Events
 {
+	internal static async Task OnUserBanned()
+	{
+		await Task.Delay(1);
+	}
+
+		// TODO:
+		// make this load and save to a json
 	internal static Task OnReady()
 	{
-		_ = Task.Run(async () => await Program.LoadCommands()); // Load commands in the background to stop
+		_ = Task.Run(async () => await Program.LoadCommands()); 
+		// Load commands in the background to stop
 		// Discord.Net complaining about the Ready handler blocking the gateway task
 	    
 		//
@@ -72,8 +80,9 @@ internal static class Events
 
 	internal static async Task MessageReceived(SocketMessage msg)
 	{
+		if (msg.Author is not SocketGuildUser user) return;
 		async Task CheckMessageSoon(SocketMessage checkedMessage)
-		{
+        {
 			await Task.Delay(5000);
 			if (!Program.WatchList.Contains(checkedMessage.Id)) return;
             if (checkedMessage.Embeds.Count == 0 && checkedMessage.Attachments.Count == 0)
@@ -90,7 +99,12 @@ internal static class Events
 		{
 			return;
 		}
-		
+		// TODO
+		// specialized trigger
+		if(msg.Channel.Id is 1354832385128271922 or 1349410207582785670 && user.Roles.Any(x => x.Id == 1354831227152109590) && msg.Content.Contains("start modding"))
+		{
+			await msg.Channel.SendMessageAsync("If you are a new-ish mod developer, please see <#1359965818787598397>");
+		}
 		if(msg.Channel.Id is 1363500762780664070 or 1360078197609201785)
 		{
 			if (msg.Attachments.Count == 0 && msg.Embeds.Count == 0)
@@ -107,7 +121,6 @@ internal static class Events
 			}
 		}
 		
-		if (msg.Author is not SocketGuildUser user) return;
 		if (user.Roles.Any(role => Program.IgnoredRoleIds.ToList().Contains(role.Id)))
 		{
 			return;

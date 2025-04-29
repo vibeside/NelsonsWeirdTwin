@@ -41,6 +41,7 @@ internal static class Program
 	
 	private static async Task Main()
 	{
+		Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 		Env.Load("token.env");
 		await TryLoadTriggers();
 
@@ -75,28 +76,8 @@ internal static class Program
 		
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
-		
-		while (BotActive)
-		{
-			switch (Console.ReadLine())
-			{
-				case "ex":
-					BotActive = false;
-					await Client.StopAsync();
-					await Client.LogoutAsync();
-					SaveTriggers();
-					break;
-				case "u":
-					await TryLoadTriggers();
-					break;
-				case "c":
-					Console.Clear();
-					break;
-				default:
-					Console.WriteLine("Arg not recognized");
-					break;
-			}
-		}
+
+		await Task.Delay(-1);
 	}
 	
 	#region Triggers and Command Loading
