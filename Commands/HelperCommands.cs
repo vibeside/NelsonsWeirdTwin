@@ -1,4 +1,5 @@
 ﻿using Discord;
+using Discord.Commands;
 using Discord.WebSocket;
 using NelsonsWeirdTwin.Extensions;
 using System;
@@ -12,6 +13,7 @@ namespace NelsonsWeirdTwin.Commands
 {
     internal class HelperCommands : Command
     {
+        internal static int[] exitCodes = [2005,1337];
         internal override SlashCommandProperties CommandProperties =>
         new SlashCommandBuilder()
             .WithName("helper")
@@ -21,6 +23,12 @@ namespace NelsonsWeirdTwin.Commands
                     .WithName("killbot")
                     .WithDescription("Kills the bot MUAHAHAHAHAHA")
                     .WithType(ApplicationCommandOptionType.SubCommand)
+                    .AddOption(
+                        new SlashCommandOptionBuilder()
+                            .WithName("exitcode")
+                            .WithDescription("Used to determine what the bot does upon being closed.")
+                            .WithType(ApplicationCommandOptionType.Integer)
+                    )
             )
             .AddOption(
                 new SlashCommandOptionBuilder()
@@ -52,12 +60,24 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal async Task Killbot(SocketSlashCommand context)
         {
+            int exitCode = (int)context.Data.Options.First().Options.First().Value;
             await context.ModifyOriginalMessageAsync("eugh im dying ah");
             await Program.Client.LogoutAsync();
             await Program.Client.StopAsync();
             Program.SaveTriggers();
-            await Task.Delay(3000);
-            Environment.Exit(0);
+            await Task.Delay(1000);
+            Environment.Exit(exitCode);
+        }
+        internal override async Task OnAutocompleteResultsRequested(DiscordSocketClient client, SocketAutocompleteInteraction context)
+        {
+            if(context.Data.Current.Name != "exitcode")
+            {
+                await context.RespondAsync([]);
+                return;
+            }
+            
+            await context.RespondAsync(exitCodes.Select(x => new AutocompleteResult(x.ToString(),x)));
+            
         }
     }
 }
