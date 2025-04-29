@@ -37,7 +37,6 @@ namespace NelsonsWeirdTwin.Commands
                 v.Append("==================================================================\n");
                 v.Append($"Verified {user.GlobalName} ({user.Mention}) at {DateTime.UtcNow}\n");
                 v.Append($"Command ran by: {context.User.GlobalName} ({context.User.Mention})\n");
-                v.Append("==================================================================\n");
 				await context.RespondAsync($"<@{user.Id}> has been marked as verified!", ephemeral: true);
 				File.AppendAllText("VerifyLog.txt", v.ToString());
 				return;
