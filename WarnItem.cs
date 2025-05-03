@@ -22,7 +22,7 @@ namespace NelsonsWeirdTwin
     [Serializable]
     public record WarnItem
     {
-        public long User { get; set; } = 0;
+        public ulong User { get; set; } = 0;
         public List<Warn> CurrentWarns { get; set; } = [];
 
         public uint ExpiredWarns {  get; set; } = 0;

@@ -86,7 +86,37 @@ internal static class Program
 		TriggerItems.Add(trigger);
 		await SaveTriggers();
 	}
+	internal static async ValueTask<List<WarnItem>> TryLoadWarns()
+	{
+		// shouldnt error, but it may
+		List<WarnItem> l = null;
+        ITextChannel c = await Client.GetChannelAsync(1360653812829913128) as ITextChannel; // error channel
 
+        try
+			{
+				l = JsonConvert.DeserializeObject<List<WarnItem>>(await File.ReadAllTextAsync("warns.json"));
+			}
+			catch (FileNotFoundException)
+			{
+				// Avoid creating a new warns.json in case the file does exist in the wrong location.
+				c.SendMessageAsync("Could not retrieve warns file. <@939127707034333224> recommend SSHing and checking.");
+				return null;
+			}
+			catch (JsonException)
+			{
+				// Again, avoid recreating just in case.
+				c.SendMessageAsync("Could not read warns.json. <@939127707034333224>");
+				return null;
+			}
+			catch (Exception ex)
+			{
+				c.SendMessageAsync("<@939127707034333224> Bot encountered error:" + ex.ToString());
+				return null;
+			}
+
+		return l;
+
+	}
 	internal static async Task TryLoadTriggers()
 	{
 		try
