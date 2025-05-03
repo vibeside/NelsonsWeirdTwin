@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Xml.Schema;
 using Discord;
 using Discord.WebSocket;
 using NelsonsWeirdTwin.Extensions;
@@ -193,20 +194,20 @@ internal class TriggerCommands: Command
 					return;
 				}
 
-				List<string> aliasesList = [];
+				HashSet<string> aliasesList = [];
 				if (!string.IsNullOrEmpty(aliases))
 				{
-					aliasesList = aliases.Trim().Split('\n').ToList(); // ...split the aliases into a list...
-					if (aliasesList.Count > 0) // ...if there are aliases...
-					{
-						var conflicts = CheckForConflicts(aliasesList); // ...check if these aliases already exist...
-						if (conflicts.Count > 0) // ...alert the user if they do...
-						{
-							await modal.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)),
-								ephemeral: true);
-							return;
-						}
-					}
+					aliasesList = aliases.Trim().Split('\n').ToHashSet(); // ...split the aliases into a list...
+					//if (aliasesList.Count > 0) // ...if there are aliases...
+					//{
+						//var conflicts = CheckForConflicts(aliasesList); // ...check if these aliases already exist...
+						//if (conflicts.Count > 0) // ...alert the user if they do...
+						//{
+							//await modal.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)),
+								//ephemeral: true);
+							//return;
+						//}
+					//}
 				}
 
 				await Program.AddNewTrigger(new TriggerItem
@@ -385,34 +386,37 @@ internal class TriggerCommands: Command
 			return;
 		}
 		
-		List<string> aliasesList = [];
+		HashSet<string> aliasesList = [];
 		if (!string.IsNullOrEmpty(aliases))
 		{
-			aliasesList = aliases.Trim().Split('\n').ToList(); // ...split the aliases into a list...
-			if (aliasesList.Count > 0) // ...if there are aliases...
-			{
-				var conflicts = CheckForConflicts(aliasesList); // ...check if these aliases already exist...
-				if (conflicts.Count > 0) // ...alert the user if they do...
-				{
-					await context.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)),
-						ephemeral: true);
-					return;
-				}
-			}
+			aliasesList = aliases.Trim().Split('\n').ToHashSet(); // ...split the aliases into a list...
+			//if (aliasesList.Count > 0) // ...if there are aliases...
+			//{
+			//	var conflicts = CheckForConflicts(aliasesList); // ...check if these aliases already exist...
+			//	if (conflicts.Count > 0) // ...alert the user if they do...
+			//	{
+			//		await context.RespondAsync(string.Format(ConflictsFound, string.Join("\n- ", conflicts)),
+			//			ephemeral: true);
+			//		return;
+			//	}
+			//}
 		}
+		int v = Program.TriggerItems.FirstOrDefault(x => x.Id == id)?.TimesTriggered ?? 0;
 
 		Program.TriggerItems.RemoveAll(t => t.Id == id); // ...remove the old trigger...
 		await Program.AddNewTrigger(new TriggerItem
 		{
 			Id = id,
 			Aliases = aliasesList,
-			Response = response
+			Response = response,
+			TimesTriggered = v
 		}); // ...add the new trigger to the list...
 		
 		await context.RespondAsync($"Updated trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the new trigger and content.
 	}
 	private List<string> CheckForConflicts(List<string> toBeAddedAliases)
 	{
+		
 		return toBeAddedAliases.Where(a => Program.TriggerItems.Any(t => t.Aliases.Contains(a, StringComparer.InvariantCultureIgnoreCase))).ToList(); // ...check if any of the aliases already exist...
 	}
 	private List<string> CheckForConflicts(List<string> toBeAddedAliases, string myID)

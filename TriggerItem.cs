@@ -8,7 +8,7 @@ public record TriggerItem
 {
 	public string Id { get; set; } = string.Empty;
 	
-	public List<string> Aliases { get; set; } = [];
+	public HashSet<string> Aliases { get; set; } = []; // Hashset to force uniqueness
 	public string Response { get; set; } = string.Empty;
 
 	public int TimesTriggered { get; set; } = 0;
