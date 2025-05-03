@@ -21,11 +21,19 @@ namespace NelsonsWeirdTwin.Commands
                     .WithName("add")
                     .WithDescription("Adds a warn to a specified user")
                     .WithType(ApplicationCommandOptionType.SubCommand)
-                    .WithRequired(true).AddOption(
+                    .WithRequired(true)
+                    .AddOption(
                         new SlashCommandOptionBuilder()
                             .WithName("user")
                             .WithDescription("User to warn")
                             .WithType(ApplicationCommandOptionType.User)
+                            .WithRequired(true)
+                    )
+                    .AddOption(
+                        new SlashCommandOptionBuilder()
+                            .WithName("reason")
+                            .WithDescription("Reason for warn")
+                            .WithType(ApplicationCommandOptionType.String)
                             .WithRequired(true)
                         )
                 )
@@ -55,23 +63,35 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal static async Task HandleAdd(SocketSlashCommand context)
         {
-            var user = context.Data.Options.First().Options.First().Value as IUser;
+            var user = context.Data.Options.FirstOrDefault(x => x.Name == "user").Value as IUser;
+            string reason = context.Data.Options.FirstOrDefault(x => x.Name == "reason").Value as string;
+            await Program.AddWarn(user.Id, new Warn()
+            {
+                Reason = reason,
+                Timestamp = DateTime.UtcNow,
+                IssuerID = context.User.Id
+            });
+
         }
         internal static async Task HandleList(SocketSlashCommand context)
         {
             // get the warns for the user thats trying to list.
             WarnItem userWarn = (await Program.TryLoadWarns()).FirstOrDefault(x => x.User == context.User.Id);
-            
             EmbedBuilder eb = new EmbedBuilder()
             .WithAuthor(context.User)
-            .WithDescription("Warns for user");
+            .WithColor(Utils.RandColor(context.User.Id))
+            .WithTitle($"Warns for <@{context.User.Id}")
+            .WithFooter("naughty naughty little guy")
+            .WithDescription($"You have {userWarn.CurrentWarns.Count} {Utils.Plural(userWarn.CurrentWarns.Count, "warn")}");
             foreach(Warn warn in userWarn.CurrentWarns)
             {
                 eb.AddField(
                     new EmbedFieldBuilder()
                     .WithName($"Issued by:<@{warn.IssuerID}>")
+                    .WithValue($"Reason:{warn.Reason}")
                     );
             }
+            await context.RespondAsync(embed: eb.Build(),ephemeral:true);
         }
     }
 }

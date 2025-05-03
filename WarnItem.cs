@@ -10,14 +10,8 @@ namespace NelsonsWeirdTwin
     public class Warn
     {
         public string Reason = "";
-        public long Timestamp = 0;
-        public long IssuerID = 0;
-        public Warn(string reason, long timestamp, long issuer)
-        {
-            Reason = reason;
-            Timestamp = timestamp;
-            IssuerID = issuer;
-        }
+        public DateTime Timestamp = DateTime.MinValue;
+        public ulong IssuerID = 0;
     }
     [Serializable]
     public record WarnItem
