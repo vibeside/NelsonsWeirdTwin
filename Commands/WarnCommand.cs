@@ -21,7 +21,6 @@ namespace NelsonsWeirdTwin.Commands
                     .WithName("add")
                     .WithDescription("Adds a warn to a specified user")
                     .WithType(ApplicationCommandOptionType.SubCommand)
-                    .WithRequired(true)
                     .AddOption(
                         new SlashCommandOptionBuilder()
                             .WithName("user")
@@ -42,7 +41,6 @@ namespace NelsonsWeirdTwin.Commands
                     .WithName("list")
                     .WithDescription("List your own warns")
                     .WithType(ApplicationCommandOptionType.SubCommand)
-                    .WithRequired(true)
                 )
             .Build();
         internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)

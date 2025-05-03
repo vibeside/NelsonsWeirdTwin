@@ -44,9 +44,11 @@ internal static class Program
 		Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 		Env.Load("token.env");
 		await TryLoadTriggers();
-
+#if PROD
 		var token = Environment.GetEnvironmentVariable("TOKEN");
-
+#elif TEST
+		var token = Environment.GetEnvironmentVariable("TESTTOKEN");
+#endif
 		if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
@@ -166,8 +168,8 @@ internal static class Program
 		var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
 		var types = assembly.GetTypes() // ...get all types...
 			.Where(t => t.IsClass && !t.IsAbstract &&
-			            t.IsSubclassOf(
-				            typeof(Command))) // ...and filter them to only include classes that inherit from Command.
+						t.IsSubclassOf(
+							typeof(Command))) // ...and filter them to only include classes that inherit from Command.
 			.ToList();
 		if (types.Count == 0)
 		{
@@ -195,18 +197,20 @@ internal static class Program
 
 		var guild = Client.GetGuild(1349221936470687764); // S1 Modding
 		guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
+		guild ??= Client.GetGuild(1368263313531732008); // Pacas test server
 
-		if (reregister)
-		{
-			await Client.BulkOverwriteGlobalApplicationCommandsAsync([]);
-			await guild.DeleteApplicationCommandsAsync();
-			
-			Console.WriteLine("Deleted all commands. Re-registering in 5 seconds...");
-			await Task.Delay(5000);
-		}
-		
-		await guild.BulkOverwriteApplicationCommandAsync(CommandsList.Select(c => c.CommandProperties).ToArray<ApplicationCommandProperties>());
-		Console.WriteLine($"Finished registering {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}!");
-	}
+        if (reregister)
+        {
+            await Client.BulkOverwriteGlobalApplicationCommandsAsync([]);
+            await guild.DeleteApplicationCommandsAsync();
+
+            Console.WriteLine("Deleted all commands. Re-registering in 5 seconds...");
+            await Task.Delay(5000);
+        }
+
+        await guild.BulkOverwriteApplicationCommandAsync(CommandsList.Select(c => c.CommandProperties).ToArray<ApplicationCommandProperties>());
+        Console.WriteLine($"Finished registering {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}!");
+
+    }
 }
 #endregion
