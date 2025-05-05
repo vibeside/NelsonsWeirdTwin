@@ -19,7 +19,7 @@ internal static class Utils
 		byte g = (byte)rand.Next(256);
 		byte b = (byte)rand.Next(256);
 		byte a = (byte)rand.Next(256);
-		return Color.Parse($"{r}{g}{b}{(alpha ? a : "")}");
+		return Color.Parse($"{r:X2}{g:X2}{b:X2}{(alpha ? $"{a:X2}" : "")}");
 
     }
 }

@@ -87,13 +87,18 @@ namespace NelsonsWeirdTwin.Commands
             user ??= context.User;
             // get the warns for the user thats trying to list.
             WarnItem userWarn = (await Program.TryLoadWarns()).FirstOrDefault(x => x.User == user.Id);
+            if (userWarn == null)
+            {
+                await context.RespondAsync("You've been a good boy! no warns!");
+                return;
+            }
             EmbedBuilder eb = new EmbedBuilder()
             .WithAuthor(user)
             .WithColor(Utils.RandColor(user.Id))
             .WithTitle($"Warns for <@{user.Id}")
             .WithFooter("naughty naughty little guy")
             .WithDescription($"You have {userWarn.CurrentWarns.Count} {Utils.Plural(userWarn.CurrentWarns.Count, "warn")}");
-            foreach(Warn warn in userWarn.CurrentWarns)
+            foreach (Warn warn in userWarn.CurrentWarns)
             {
                 eb.AddField(
                     new EmbedFieldBuilder()
@@ -101,7 +106,7 @@ namespace NelsonsWeirdTwin.Commands
                     .WithValue($"Reason:{warn.Reason}")
                     );
             }
-            await context.RespondAsync(embed: eb.Build(),ephemeral:true);
+            await context.RespondAsync(embed: eb.Build(), ephemeral: true);
         }
     }
 }

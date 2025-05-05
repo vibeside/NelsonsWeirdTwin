@@ -11,7 +11,7 @@ namespace NelsonsWeirdTwin;
 
 internal static class Events
 {
-	internal static async Task OnUserBanned()
+	internal static async Task OnUserBanned(SocketUser user, SocketGuild guild)
 	{
 		await Task.Delay(1);
 	}
