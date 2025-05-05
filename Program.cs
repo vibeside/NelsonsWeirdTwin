@@ -193,7 +193,7 @@ internal static class Program
 		}
 
 		Console.WriteLine(
-			$"Found {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}.");
+			$"Found {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command")}.");
 
 		var guild = Client.GetGuild(1349221936470687764); // S1 Modding
 		guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server

@@ -7,7 +7,10 @@ internal static class Utils
 {
 	internal static string Plural(int count, string singular, string plural = "s")
 	{
-		return count == 1 ? singular : singular + plural;
+		if (plural == "s")
+			return count == 1 ? singular : singular + plural;
+		else
+			return count == 1 ? singular : plural;
 	}
 	internal static Color RandColor(ulong seed, bool alpha = false)
 	{

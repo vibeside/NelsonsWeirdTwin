@@ -41,6 +41,13 @@ namespace NelsonsWeirdTwin.Commands
                     .WithName("list")
                     .WithDescription("List your own warns")
                     .WithType(ApplicationCommandOptionType.SubCommand)
+                    .AddOption(
+                        new SlashCommandOptionBuilder()
+                            .WithName("user")
+                            .WithDescription("User to list warns for.")
+                            .WithType(ApplicationCommandOptionType.User)
+                            .WithRequired(false)
+                    )
                 )
             .Build();
         internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
@@ -61,18 +68,26 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal static async Task HandleAdd(SocketSlashCommand context)
         {
-            var user = context.Data.Options.FirstOrDefault(x => x.Name == "user").Value as IUser;
-            string reason = context.Data.Options.FirstOrDefault(x => x.Name == "reason").Value as string;
+            var actualContext = context.Data.Options.FirstOrDefault(x => x.Name == "add");
+            IUser user = actualContext.Options.FirstOrDefault(x => x.Name == "user").Value as IUser;
+            string reason = actualContext.Options.FirstOrDefault(x => x.Name == "reason").Value as string;
             await Program.AddWarn(user.Id, new Warn()
             {
                 Reason = reason,
                 Timestamp = DateTime.UtcNow,
                 IssuerID = context.User.Id
             });
+            await context.RespondAsync($"Warned {user.Username} for {reason}");
 
         }
         internal static async Task HandleList(SocketSlashCommand context)
         {
+            var actualContext = context.Data.Options.FirstOrDefault(x => x.Name == "add");
+            if (actualContext.Options.FirstOrDefault(x => x.Name == "user").Value is not IUser user) 
+            {
+                await context.RespondAsync("No user found.");
+                return;
+            }
             // get the warns for the user thats trying to list.
             WarnItem userWarn = (await Program.TryLoadWarns()).FirstOrDefault(x => x.User == context.User.Id);
             EmbedBuilder eb = new EmbedBuilder()
