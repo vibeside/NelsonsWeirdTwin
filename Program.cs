@@ -93,7 +93,7 @@ internal static class Program
         // shouldnt error, but it may
         List<WarnItem> l;
         ITextChannel c = await Client.GetChannelAsync(1360653812829913128) as ITextChannel; // error channel
-
+		c ??= await Client.GetChannelAsync(1368263313531732011) as ITextChannel; // Test server id
         try
         {
             l = JsonConvert.DeserializeObject<List<WarnItem>>(await File.ReadAllTextAsync("warns.json"));
@@ -102,17 +102,20 @@ internal static class Program
         {
             // Avoid creating a new warns.json in case the file does exist in the wrong location.
             c.SendMessageAsync("Could not retrieve warns file. <@939127707034333224> recommend SSHing and checking.");
-            return null;
+			Console.WriteLine("Could not retrieve warns file.");
+			return null;
         }
         catch (JsonException)
         {
             // Again, avoid recreating just in case.
             c.SendMessageAsync("Could not read warns.json. <@939127707034333224>");
+			Console.WriteLine("Could not read warns.json");
             return null;
         }
         catch (Exception ex)
         {
             c.SendMessageAsync("<@939127707034333224> Bot encountered error:" + ex.ToString());
+			Console.WriteLine(ex.ToString());
             return null;
         }
         return l;

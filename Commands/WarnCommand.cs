@@ -82,18 +82,15 @@ namespace NelsonsWeirdTwin.Commands
         }
         internal static async Task HandleList(SocketSlashCommand context)
         {
-            var actualContext = context.Data.Options.FirstOrDefault(x => x.Name == "add");
-            if (actualContext.Options.FirstOrDefault(x => x.Name == "user").Value is not IUser user) 
-            {
-                await context.RespondAsync("No user found.");
-                return;
-            }
+            var actualContext = context.Data.Options.FirstOrDefault(x => x.Name == "list");
+            IUser user = actualContext.Options.FirstOrDefault(x => x.Name == "user")?.Value as IUser;
+            user ??= context.User;
             // get the warns for the user thats trying to list.
-            WarnItem userWarn = (await Program.TryLoadWarns()).FirstOrDefault(x => x.User == context.User.Id);
+            WarnItem userWarn = (await Program.TryLoadWarns()).FirstOrDefault(x => x.User == user.Id);
             EmbedBuilder eb = new EmbedBuilder()
-            .WithAuthor(context.User)
-            .WithColor(Utils.RandColor(context.User.Id))
-            .WithTitle($"Warns for <@{context.User.Id}")
+            .WithAuthor(user)
+            .WithColor(Utils.RandColor(user.Id))
+            .WithTitle($"Warns for <@{user.Id}")
             .WithFooter("naughty naughty little guy")
             .WithDescription($"You have {userWarn.CurrentWarns.Count} {Utils.Plural(userWarn.CurrentWarns.Count, "warn")}");
             foreach(Warn warn in userWarn.CurrentWarns)
