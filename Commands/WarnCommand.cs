@@ -52,6 +52,20 @@ namespace NelsonsWeirdTwin.Commands
             .Build();
         internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context)
         {
+            // Expires warns before running commands.
+            List<WarnItem> allWarns = (await Program.TryLoadWarns());
+            foreach (var item in allWarns)
+            {
+                for (int i = 0; i < item.CurrentWarns.Count; i++)
+                {
+                    if (item.CurrentWarns[i].ShouldExpire)
+                    {
+                        item.CurrentWarns.RemoveAt(i);
+                        item.ExpiredWarns += 1;
+                    }
+                }
+            }
+            await Program.RewriteWarns(allWarns);
             var option = context.Data.Options.First().Name; // Get the first option, which is the subcommand.
             switch (option)
             {
@@ -92,18 +106,20 @@ namespace NelsonsWeirdTwin.Commands
                 await context.RespondAsync("You've been a good boy! no warns!");
                 return;
             }
+            string expiredString = userWarn.ExpiredWarns > 0 ? $" and {userWarn.ExpiredWarns} expired {Utils.Plural((int)userWarn.ExpiredWarns,"warn")}" : "";
             EmbedBuilder eb = new EmbedBuilder()
             .WithAuthor(user)
             .WithColor(Utils.RandColor(user.Id))
-            .WithTitle($"Warns for <@{user.Id}")
-            .WithFooter("naughty naughty little guy")
-            .WithDescription($"You have {userWarn.CurrentWarns.Count} {Utils.Plural(userWarn.CurrentWarns.Count, "warn")}");
+            .WithTitle($"You have {userWarn.CurrentWarns.Count} {Utils.Plural(userWarn.CurrentWarns.Count, "warn")}{expiredString}")
+            .WithDescription("why you gotta be so naughty and mean :(")
+            .WithFooter("naughty naughty little guy");
+            
             foreach (Warn warn in userWarn.CurrentWarns)
             {
                 eb.AddField(
                     new EmbedFieldBuilder()
-                    .WithName($"Issued by:<@{warn.IssuerID}>")
-                    .WithValue($"Reason:{warn.Reason}")
+                    .WithValue($"Issued by:<@{warn.IssuerID}>")
+                    .WithName($"Reason:{warn.Reason}")
                     );
             }
             await context.RespondAsync(embed: eb.Build(), ephemeral: true);

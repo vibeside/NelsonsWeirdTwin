@@ -89,6 +89,10 @@ internal static class Program
 		TriggerItems.Add(trigger);
 		await SaveTriggers();
 	}
+	internal static async Task RewriteWarns(List<WarnItem> warns)
+	{
+		await File.WriteAllTextAsync("warns.json",JsonConvert.SerializeObject(warns));
+	}
     internal static async ValueTask<List<WarnItem>> TryLoadWarns()
     {
         // shouldnt error, but it may
@@ -102,6 +106,7 @@ internal static class Program
         try
         {
             l = JsonConvert.DeserializeObject<List<WarnItem>>(await File.ReadAllTextAsync("warns.json"));
+			
         }
         catch (FileNotFoundException)
         {

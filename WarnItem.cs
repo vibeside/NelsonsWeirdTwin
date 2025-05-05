@@ -9,9 +9,11 @@ namespace NelsonsWeirdTwin
 {
     public class Warn
     {
+        public static int ExpiryTimeInDays = 14;
         public string Reason = "";
         public DateTime Timestamp = DateTime.MinValue;
         public ulong IssuerID = 0;
+        public bool ShouldExpire => (DateTime.UtcNow - Timestamp).TotalDays >= ExpiryTimeInDays;
     }
     [Serializable]
     public record WarnItem
