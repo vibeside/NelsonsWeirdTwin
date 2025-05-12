@@ -50,7 +50,9 @@ internal static class Program
 #elif TEST
 		token = Environment.GetEnvironmentVariable("TESTTOKEN");
 #endif
-		if (string.IsNullOrEmpty(token))
+		token = token == "" ? token = Environment.GetEnvironmentVariable("TOKEN") : token;
+
+        if (string.IsNullOrEmpty(token))
 		{
 			Console.WriteLine("TOKEN not found in environment variables, or .env file. Please set it and try again.");
 			Console.ReadLine(); // Pull a bash "pause" fr
