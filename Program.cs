@@ -22,8 +22,9 @@ internal static class Program
 {
 	public static bool BotActive = true;
 	public static DiscordSocketClient Client;
+    public static string token = "";
 
-	public static List<TriggerItem> TriggerItems = [];
+    public static List<TriggerItem> TriggerItems = [];
 	internal static readonly List<Command> CommandsList = [];
 	internal static readonly List<ulong> WatchList = [];
 
@@ -44,7 +45,6 @@ internal static class Program
 		Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 		Env.Load("token.env");
 		await TryLoadTriggers();
-		string token;
 #if PROD
 		token = Environment.GetEnvironmentVariable("TOKEN");
 #elif TEST
