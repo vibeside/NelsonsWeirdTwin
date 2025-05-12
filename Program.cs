@@ -44,10 +44,11 @@ internal static class Program
 		Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 		Env.Load("token.env");
 		await TryLoadTriggers();
+		string token;
 #if PROD
-		var token = Environment.GetEnvironmentVariable("TOKEN");
+		token = Environment.GetEnvironmentVariable("TOKEN");
 #elif TEST
-		var token = Environment.GetEnvironmentVariable("TESTTOKEN");
+		token = Environment.GetEnvironmentVariable("TESTTOKEN");
 #endif
 		if (string.IsNullOrEmpty(token))
 		{
