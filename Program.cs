@@ -9,6 +9,8 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using OllamaSharp;
+using OllamaSharp.Models;
 
 namespace NelsonsWeirdTwin;
 
@@ -28,7 +30,24 @@ internal static class Program
 	internal static readonly List<Command> CommandsList = [];
 	internal static readonly List<ulong> WatchList = [];
 
-	internal static readonly ulong[] OwnerIDs =
+	// sorry repo, im not sure how to set this up for multiple testers
+	// you'll probably figure it out.
+	internal static OllamaApiClient ollama = new("http://192.168.1.65:11434");
+	internal const string SystemPrompt =
+            "SystemPrompt: " +
+            "You are Uncle Nielson, the brother of someone named Uncle Nelson, a small town drug dealer. " +
+            "You have deep profound knowledge on drug creation and selling processes. Emulate the speech patterns " +
+            "of a person who's high on weed. Keep your responses below 200 characters, and never break character.";
+
+
+    public static GenerateRequest genericRequest = new()
+	{
+		Stream = false,
+		Model = "wizard-vicuna-uncensored:7b",
+		System = SystemPrompt
+	};
+
+    internal static readonly ulong[] OwnerIDs =
 	[
 		939127707034333224, // @stupidrepo
 		1295119273030586471, // @coolpaca
@@ -183,52 +202,58 @@ internal static class Program
 
 	internal static async Task LoadCommands(bool reregister = false)
 	{
-		var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
-		var types = assembly.GetTypes() // ...get all types...
-			.Where(t => t.IsClass && !t.IsAbstract &&
-						t.IsSubclassOf(
-							typeof(Command))) // ...and filter them to only include classes that inherit from Command.
-			.ToList();
-		if (types.Count == 0)
+		try
 		{
-			Console.WriteLine("WARNING: No commands found.");
-			return;
-		}
-
-		CommandsList.Clear();
-		foreach (var type in types)
-		{
-			var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
-			if (command == null) continue;
-
-			if (command.CommandProperties == null)
+			var assembly = Assembly.GetExecutingAssembly(); // Get the current assembly...
+			var types = assembly.GetTypes() // ...get all types...
+				.Where(t => t.IsClass && !t.IsAbstract &&
+							t.IsSubclassOf(
+								typeof(Command))) // ...and filter them to only include classes that inherit from Command.
+				.ToList();
+			if (types.Count == 0)
 			{
-				Console.WriteLine($"Command \"{type.Name}\" does not have a CommandProperties property. Skipping.");
-				continue;
+				Console.WriteLine("WARNING: No commands found.");
+				return;
 			}
 
-			CommandsList.Add(command); // ...and add it to the list of commands.
+			CommandsList.Clear();
+			foreach (var type in types)
+			{
+				var command = (Command)Activator.CreateInstance(type); // Create an instance of the command...
+				if (command == null) continue;
+
+				if (command.CommandProperties == null)
+				{
+					Console.WriteLine($"Command \"{type.Name}\" does not have a CommandProperties property. Skipping.");
+					continue;
+				}
+
+				CommandsList.Add(command); // ...and add it to the list of commands.
+			}
+
+			Console.WriteLine(
+				$"Found {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command")}.");
+
+			var guild = Client.GetGuild(1349221936470687764); // S1 Modding
+			guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
+			guild ??= Client.GetGuild(1368263313531732008); // Pacas test server
+
+			if (reregister)
+			{
+				await Client.BulkOverwriteGlobalApplicationCommandsAsync([]);
+				await guild.DeleteApplicationCommandsAsync();
+
+				Console.WriteLine("Deleted all commands. Re-registering in 5 seconds...");
+				await Task.Delay(5000);
+			}
+
+			await guild.BulkOverwriteApplicationCommandAsync(CommandsList.Select(c => c.CommandProperties).ToArray<ApplicationCommandProperties>());
+			Console.WriteLine($"Finished registering {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}!");
 		}
-
-		Console.WriteLine(
-			$"Found {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command")}.");
-
-		var guild = Client.GetGuild(1349221936470687764); // S1 Modding
-		guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
-		guild ??= Client.GetGuild(1368263313531732008); // Pacas test server
-
-        if (reregister)
-        {
-            await Client.BulkOverwriteGlobalApplicationCommandsAsync([]);
-            await guild.DeleteApplicationCommandsAsync();
-
-            Console.WriteLine("Deleted all commands. Re-registering in 5 seconds...");
-            await Task.Delay(5000);
-        }
-
-        await guild.BulkOverwriteApplicationCommandAsync(CommandsList.Select(c => c.CommandProperties).ToArray<ApplicationCommandProperties>());
-        Console.WriteLine($"Finished registering {CommandsList.Count} {Utils.Plural(CommandsList.Count, "command", "commands")}!");
-
+		catch (Exception ex)
+		{
+			Console.WriteLine(ex.ToString());
+		}
     }
 }
 #endregion
