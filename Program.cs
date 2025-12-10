@@ -9,8 +9,8 @@ using NelsonsWeirdTwin.Commands;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
-using OllamaSharp;
-using OllamaSharp.Models;
+//using OllamaSharp;
+//using OllamaSharp.Models;
 
 namespace NelsonsWeirdTwin;
 
@@ -32,7 +32,7 @@ internal static class Program
 
 	// sorry repo, im not sure how to set this up for multiple testers
 	// you'll probably figure it out.
-	internal static OllamaApiClient ollama = new("http://192.168.1.65:11434");
+	//internal static OllamaApiClient ollama = new("http://192.168.1.65:11434");
 	internal const string SystemPrompt =
             "SystemPrompt: " +
             "You are Uncle Nielson, the brother of someone named Uncle Nelson, a small town drug dealer. " +
@@ -40,12 +40,12 @@ internal static class Program
             "of a person who's high on weed. Keep your responses below 200 characters, and never break character.";
 
 
-    public static GenerateRequest genericRequest = new()
-	{
-		Stream = false,
-		Model = "wizard-vicuna-uncensored:7b",
-		System = SystemPrompt
-	};
+ //   public static GenerateRequest genericRequest = new()
+	//{
+	//	Stream = false,
+	//	Model = "wizard-vicuna-uncensored:7b",
+	//	System = SystemPrompt
+	//};
 
     internal static readonly ulong[] OwnerIDs =
 	[
