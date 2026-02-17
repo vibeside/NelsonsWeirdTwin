@@ -14,6 +14,6 @@ internal class PingModTesters: Command
 
 	internal override async Task OnExecuted(DiscordSocketClient client, SocketSlashCommand context) // This is called when the command is executed.
 	{
-		await context.RespondAsync("<@&1356043224510103692>"); // Follow up with a mention to the Mod Testers role.
+		await context.RespondAsync("<@&1356043224510103692>",allowedMentions:AllowedMentions.All); // Follow up with a mention to the Mod Testers role.
 	}
 }
