@@ -139,7 +139,7 @@ internal class TriggerCommands: Command
 		}
 		await context.RespondAsync(sb.ToString());
 	}
-    internal override async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context) // This is called when a modal is submitted, and the modal's CustomId was found in our command's ModalIDs.
+	internal override async Task OnModalSubmitted(DiscordSocketClient client, SocketModal context) // This is called when a modal is submitted, and the modal's CustomId was found in our command's ModalIDs.
 	{
 		var customId = context.Data.CustomId;
 		switch (customId)
@@ -178,19 +178,19 @@ internal class TriggerCommands: Command
 				var aliases = modal.Data.Components.FirstOrDefault(c => c.CustomId == "alias")?.Value;
 				if (string.IsNullOrEmpty(id)) // ...check if the ID is empty...
 				{
-					await modal.RespondAsync(EmptyId, ephemeral: true);
+					await modal.FollowupAsync(EmptyId, ephemeral: true);
 					return;
 				}
 				if (string.IsNullOrEmpty(response)) // ...check if the response text is empty...
 				{
-					await modal.RespondAsync(EmptyResponse, ephemeral: true);
+					await modal.FollowupAsync(EmptyResponse, ephemeral: true);
 					return;
 				}
 				
 				id = id.ToLower(); // ...make it lowercase to avoid case sensitivity issues...
 				if (Program.TriggerItems.Any(t => t.Id == id)) // ...check if the trigger already exists...
 				{
-					await modal.RespondAsync(string.Format(AlreadyExists, id), ephemeral: true);
+					await modal.FollowupAsync(string.Format(AlreadyExists, id), ephemeral: true);
 					return;
 				}
 
@@ -216,7 +216,7 @@ internal class TriggerCommands: Command
 					Aliases = aliasesList,
 					Response = response
 				}); // ...add the trigger to the list...
-				await modal.RespondAsync($"Added trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the trigger and content.
+				await modal.FollowupAsync($"Added trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the trigger and content.
 				break;
 		}
 	}
@@ -365,16 +365,16 @@ internal class TriggerCommands: Command
 		await context.RespondAsync(options);
 	}
 
-	private async Task DoTriggerUpdate(string? id, string? response, string? aliases, IDiscordInteraction context)
+	private async Task DoTriggerUpdate(string? id, string? response, string? aliases, SocketModal context)
 	{
 		if (string.IsNullOrEmpty(id)) // ...Check if the ID is empty...
 		{
-			await context.RespondAsync(EmptyId, ephemeral: true);
+			await context.FollowupAsync(EmptyId, ephemeral: true);
 			return;
 		}
 		if (string.IsNullOrEmpty(response)) // ...check if the response text is empty...
 		{
-			await context.RespondAsync(EmptyResponse, ephemeral: true);
+			await context.FollowupAsync(EmptyResponse, ephemeral: true);
 			return;
 		}
 		
@@ -382,7 +382,7 @@ internal class TriggerCommands: Command
 		var existing = Program.TriggerItems.FirstOrDefault(t => t.Id == id);
 		if (existing == null) // ...check if the trigger exists...
 		{
-			await context.RespondAsync(string.Format(NotFound, id), ephemeral: true);
+			await context.FollowupAsync(string.Format(NotFound, id), ephemeral: true);
 			return;
 		}
 		
@@ -412,7 +412,7 @@ internal class TriggerCommands: Command
 			TimesTriggered = v
 		}); // ...add the new trigger to the list...
 		
-		await context.RespondAsync($"Updated trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the new trigger and content.
+		await context.FollowupAsync($"Updated trigger with ID `{id}`, and response:\n```\n{response}\n```", ephemeral: true); // ...and respond with the new trigger and content.
 	}
 	private List<string> CheckForConflicts(List<string> toBeAddedAliases)
 	{

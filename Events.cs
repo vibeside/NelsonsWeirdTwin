@@ -35,30 +35,48 @@ internal static class Events
 
 	internal static async Task SelectMenuHandler(SocketMessageComponent c)
 	{
-		if (c.User is not SocketGuildUser u) await c.RespondAsync("Couldn't find user");
-		else
+		if (c.User is not SocketGuildUser u)
 		{
-			var chosenRoles = RolePicker.roles.Where(r => c.Data.Values.Contains(r.Id.ToString())).ToList();
-			var removedRoles = RolePicker.roles.Where(r => !c.Data.Values.Contains(r.Id.ToString())).ToList();
-			
-			var chosenRolesJoined = string.Join(", ", chosenRoles.ConvertAll(x => $"<@&{x.Id}>"));
-			var removedRolesJoined = string.Join(", ", removedRoles.ConvertAll(x => $"<@&{x.Id}>"));
+			await c.RespondAsync("Couldn't find user");
+			return;
+		}
 
-			var sb = new StringBuilder();
+		var chosenRoles = RolePicker.roles.Where(r => c.Data.Values.Contains(r.Id.ToString())).ToList();
+		var removedRoles = RolePicker.roles.Where(r => !c.Data.Values.Contains(r.Id.ToString())).ToList();
+		
+		var chosenRolesJoined = string.Join(", ", chosenRoles.ConvertAll(x => $"<@&{x.Id}>"));
+		var removedRolesJoined = string.Join(", ", removedRoles.ConvertAll(x => $"<@&{x.Id}>"));
 
-			sb.Append((chosenRoles.Count == 0
-				? "Didn't give any roles"
-				: $"Gave {u.Username} the roles {chosenRolesJoined}") + " "); // "[text] "
+		var sb = new StringBuilder();
 
-			sb.Append(removedRoles.Count == 0
-				? ""
-				: $"and removed the roles {removedRolesJoined}");
-			
+		sb.Append((chosenRoles.Count == 0
+			? "Didn't give any roles"
+			: $"Gave {u.Username} the roles {chosenRolesJoined}") + " ");
+
+		sb.Append(removedRoles.Count == 0
+			? ""
+			: $"and removed the roles {removedRolesJoined}");
+
+		await c.DeferAsync(ephemeral: true);
+
+		Program.RunBackgroundTask(nameof(SelectMenuHandler), async () =>
+		{
 			await u.RemoveRolesAsync(removedRoles);
 			await u.AddRolesAsync(chosenRoles);
-			
-			await c.RespondAsync(sb.ToString(), ephemeral: true, allowedMentions:AllowedMentions.None);
+
+			await c.FollowupAsync(sb.ToString(), ephemeral: true, allowedMentions: AllowedMentions.None);
+		});
+	}
+
+	internal static async Task ButtonHandler(SocketMessageComponent component)
+	{
+		if (component.Data.CustomId.StartsWith(SupportLogAnalyzer.PaginationCustomIdPrefix, StringComparison.Ordinal))
+		{
+			await Program.SupportLogAnalyzer.TryHandlePaginationAsync(component);
+			return;
 		}
+
+		await component.RespondAsync("That button is not handled.", ephemeral: true);
 	}
 
 	internal static async Task MessageUpdated(Cacheable<IMessage, ulong> orig, SocketMessage updated, ISocketMessageChannel channel)
@@ -95,7 +113,7 @@ internal static class Events
                 Program.WatchList.Remove(checkedMessage.Id);
             }
         }
-		if (msg is not SocketUserMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
+		if (msg is not SocketUserMessage userMessage || msg.Author is { IsBot: true } or { IsWebhook: true })
 		{
 			return;
 		}
@@ -119,6 +137,11 @@ internal static class Events
 				
 				await channel.CreateThreadAsync($"{msg.Author.Username}'s mod showoff thread.", message: msg);
 			}
+		}
+
+		if (await Program.SupportLogAnalyzer.TryHandleMessageAsync(userMessage))
+		{
+			return;
 		}
 		
 		if (user.Roles.Any(role => Program.IgnoredRoleIds.ToList().Contains(role.Id)))
@@ -174,7 +197,8 @@ internal static class Events
 		
 		foreach (var cmd in Program.CommandsList.Where(cmd => cmd.ModalIDs.Contains(modal.Data.CustomId)))
 		{
-			await cmd.OnModalSubmitted(Program.Client, modal);
+			await modal.DeferAsync(ephemeral: true);
+			Program.RunBackgroundTask(nameof(ModalSubmit), () => cmd.OnModalSubmitted(Program.Client, modal));
 			return;
 		}
 		
