@@ -29,6 +29,9 @@ internal static class Program
     public static List<TriggerItem> TriggerItems = [];
 	internal static readonly List<Command> CommandsList = [];
 	internal static readonly List<ulong> WatchList = [];
+	internal static readonly HashSet<ulong> SupportChannelIds = [];
+	internal static readonly SupportLogAnalyzer SupportLogAnalyzer = new();
+	private const ulong DefaultProductionSupportChannelId = 1354832385128271922;
 
 	// sorry repo, im not sure how to set this up for multiple testers
 	// you'll probably figure it out.
@@ -63,6 +66,7 @@ internal static class Program
 	{
 		Directory.SetCurrentDirectory(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location));
 		Env.Load("token.env");
+		LoadSupportChannelIds();
 		await TryLoadTriggers();
 #if PROD
 		token = Environment.GetEnvironmentVariable("TOKEN");
@@ -80,29 +84,133 @@ internal static class Program
 
 		var config = new DiscordSocketConfig
 		{
-			GatewayIntents = GatewayIntents.All
+			GatewayIntents = GatewayIntents.All,
+			ResponseInternalTimeCheck = false,
+			UseInteractionSnowflakeDate = false
 		};
 		Client = new DiscordSocketClient(config);
 
 		Client.Log += message =>
 		{
-			Console.WriteLine(message.Message);
+			var exceptionText = message.Exception is null ? string.Empty : $"\n{message.Exception}";
+			Console.WriteLine($"[{message.Severity}] {message.Source}: {message.Message}{exceptionText}");
 			return Task.CompletedTask;
 		};
-		Client.Ready += Events.OnReady;
+		Client.Connected += () =>
+		{
+			Console.WriteLine("Discord gateway connected.");
+			return Task.CompletedTask;
+		};
+		Client.Disconnected += exception =>
+		{
+			Console.WriteLine(exception is null
+				? "Discord gateway disconnected without an exception."
+				: $"Discord gateway disconnected: {exception}");
+			return Task.CompletedTask;
+		};
+		Client.Ready += () => RunGatewayHandler(nameof(Events.OnReady), Events.OnReady);
 		
-		Client.MessageReceived += Events.MessageReceived;
-		Client.UserBanned += Events.OnUserBanned;
+		Client.MessageReceived += message => RunGatewayHandler(nameof(Events.MessageReceived), () => Events.MessageReceived(message));
+		Client.UserBanned += (user, guild) => RunGatewayHandler(nameof(Events.OnUserBanned), () => Events.OnUserBanned(user, guild));
 
-		Client.SlashCommandExecuted += Events.SlashCommandSubmit;
-		Client.ModalSubmitted += Events.ModalSubmit;
-		Client.SelectMenuExecuted += Events.SelectMenuHandler;
-		Client.AutocompleteExecuted += Events.AutoCompleteHandler;
+		Client.SlashCommandExecuted += command =>
+		{
+			return RunInteractionHandler(nameof(Events.SlashCommandSubmit), () => Events.SlashCommandSubmit(command));
+		};
+		Client.ModalSubmitted += modal =>
+		{
+			return RunInteractionHandler(nameof(Events.ModalSubmit), () => Events.ModalSubmit(modal));
+		};
+		Client.ButtonExecuted += component =>
+		{
+			return RunInteractionHandler(nameof(Events.ButtonHandler), () => Events.ButtonHandler(component));
+		};
+		Client.SelectMenuExecuted += component =>
+		{
+			return RunInteractionHandler(nameof(Events.SelectMenuHandler), () => Events.SelectMenuHandler(component));
+		};
+		Client.AutocompleteExecuted += context =>
+		{
+			return RunInteractionHandler(nameof(Events.AutoCompleteHandler), () => Events.AutoCompleteHandler(context));
+		};
 		
 		await Client.LoginAsync(TokenType.Bot, token);
 		await Client.StartAsync();
 
 		await Task.Delay(-1);
+	}
+
+	private static Task RunGatewayHandler(string handlerName, Func<Task> handler)
+	{
+		RunBackgroundTask(handlerName, handler);
+
+		return Task.CompletedTask;
+	}
+
+	private static Task RunInteractionHandler(string handlerName, Func<Task> handler)
+	{
+		return HandleInteractionAsync(handlerName, handler);
+	}
+
+	private static async Task HandleInteractionAsync(string handlerName, Func<Task> handler)
+	{
+		try
+		{
+			await handler();
+		}
+		catch (TimeoutException ex)
+		{
+			Console.WriteLine($"Unhandled interaction timeout in {handlerName}: {ex.Message}");
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"Unhandled exception in {handlerName}: {ex}");
+		}
+	}
+
+	internal static void RunBackgroundTask(string operationName, Func<Task> operation)
+	{
+		_ = Task.Run(async () =>
+		{
+			try
+			{
+				await operation();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"Unhandled exception in {operationName}: {ex}");
+			}
+		});
+	}
+
+	private static void LoadSupportChannelIds()
+	{
+		SupportChannelIds.Clear();
+
+		var rawValue = Environment.GetEnvironmentVariable("SUPPORT_CHANNEL_IDS");
+		if (string.IsNullOrWhiteSpace(rawValue))
+		{
+			SupportChannelIds.Add(DefaultProductionSupportChannelId);
+			Console.WriteLine($"Support log analysis enabled for the default production support channel ({DefaultProductionSupportChannelId}). Set SUPPORT_CHANNEL_IDS to override it.");
+			return;
+		}
+
+		foreach (var token in rawValue.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
+		{
+			if (!ulong.TryParse(token, out var channelId))
+			{
+				Console.WriteLine($"Ignoring invalid support channel ID '{token}'.");
+				continue;
+			}
+
+			SupportChannelIds.Add(channelId);
+		}
+
+		Console.WriteLine(
+			SupportChannelIds.Count == 0
+				? "Support log analysis is disabled. SUPPORT_CHANNEL_IDS did not contain any valid IDs."
+				: $"Support log analysis enabled for {SupportChannelIds.Count} {Utils.Plural(SupportChannelIds.Count, "channel")}."
+		);
 	}
 	
 	#region Triggers and Command Loading
@@ -237,6 +345,13 @@ internal static class Program
 			var guild = Client.GetGuild(1349221936470687764); // S1 Modding
 			guild ??= Client.GetGuild(1359858871270637762); // Bot Test Server
 			guild ??= Client.GetGuild(1368263313531732008); // Pacas test server
+			guild ??= Client.Guilds.FirstOrDefault();
+
+			if (guild == null)
+			{
+				Console.WriteLine("WARNING: No guild was available for command registration.");
+				return;
+			}
 
 			if (reregister)
 			{
