@@ -139,11 +139,6 @@ internal static class Events
 			}
 		}
 
-		if (await Program.SupportLogAnalyzer.TryHandleMessageAsync(userMessage))
-		{
-			return;
-		}
-		
 		if (user.Roles.Any(role => Program.IgnoredRoleIds.ToList().Contains(role.Id)))
 		{
 			return;

@@ -25,13 +25,14 @@ internal static class Program
 	public static bool BotActive = true;
 	public static DiscordSocketClient Client;
     public static string token = "";
+	private const ulong DefaultProductionSupportChannelId = 1354832385128271922;
 
     public static List<TriggerItem> TriggerItems = [];
 	internal static readonly List<Command> CommandsList = [];
 	internal static readonly List<ulong> WatchList = [];
 	internal static readonly HashSet<ulong> SupportChannelIds = [];
+	internal static readonly SupportLogSettingsStore SupportLogSettingsStore = new(DefaultProductionSupportChannelId);
 	internal static readonly SupportLogAnalyzer SupportLogAnalyzer = new();
-	private const ulong DefaultProductionSupportChannelId = 1354832385128271922;
 
 	// sorry repo, im not sure how to set this up for multiple testers
 	// you'll probably figure it out.
@@ -186,31 +187,38 @@ internal static class Program
 	private static void LoadSupportChannelIds()
 	{
 		SupportChannelIds.Clear();
-
-		var rawValue = Environment.GetEnvironmentVariable("SUPPORT_CHANNEL_IDS");
-		if (string.IsNullOrWhiteSpace(rawValue))
+		foreach (var channelId in SupportLogSettingsStore.LoadChannelIds())
 		{
-			SupportChannelIds.Add(DefaultProductionSupportChannelId);
-			Console.WriteLine($"Support log analysis enabled for the default production support channel ({DefaultProductionSupportChannelId}). Set SUPPORT_CHANNEL_IDS to override it.");
-			return;
-		}
-
-		foreach (var token in rawValue.Split([',', ';', ' ', '\t', '\r', '\n'], StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries))
-		{
-			if (!ulong.TryParse(token, out var channelId))
-			{
-				Console.WriteLine($"Ignoring invalid support channel ID '{token}'.");
-				continue;
-			}
-
 			SupportChannelIds.Add(channelId);
 		}
 
 		Console.WriteLine(
 			SupportChannelIds.Count == 0
-				? "Support log analysis is disabled. SUPPORT_CHANNEL_IDS did not contain any valid IDs."
+				? "Support log analysis is disabled. No analyze channels are configured."
 				: $"Support log analysis enabled for {SupportChannelIds.Count} {Utils.Plural(SupportChannelIds.Count, "channel")}."
 		);
+	}
+
+	internal static bool AddSupportChannelId(ulong channelId)
+	{
+		var added = SupportChannelIds.Add(channelId);
+		if (added)
+		{
+			SupportLogSettingsStore.SaveChannelIds(SupportChannelIds);
+		}
+
+		return added;
+	}
+
+	internal static bool RemoveSupportChannelId(ulong channelId)
+	{
+		var removed = SupportChannelIds.Remove(channelId);
+		if (removed)
+		{
+			SupportLogSettingsStore.SaveChannelIds(SupportChannelIds);
+		}
+
+		return removed;
 	}
 	
 	#region Triggers and Command Loading
@@ -227,12 +235,6 @@ internal static class Program
     {
         // shouldnt error, but it may
         List<WarnItem> l;
-		ITextChannel c = null;
-#if PROD
-		c ??=  await Client.GetChannelAsync(1360653812829913128) as ITextChannel; // Main server
-#elif TEST
-        c ??= await Client.GetChannelAsync(1368263313531732011) as ITextChannel; // Test server id
-#endif
         try
         {
             l = JsonConvert.DeserializeObject<List<WarnItem>>(await File.ReadAllTextAsync("warns.json"));

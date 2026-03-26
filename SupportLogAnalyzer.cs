@@ -18,67 +18,32 @@ internal sealed class SupportLogAnalyzer
 
 	private static readonly HttpClient HttpClient = new();
 	private static readonly string[] SupportedAttachmentExtensions = [".log", ".txt"];
-	private static readonly ConcurrentDictionary<ulong, PaginationState> PaginationStates = new();
+	private static readonly ConcurrentDictionary<ulong, PaginationStates> Sessions = new();
 
 	private const int MaxAttachmentBytes = 10 * 1024 * 1024;
 	private const int IssueGroupsPerPage = 3;
 	private const int MaxEmbedFieldLength = 1024;
+	private static readonly TimeSpan AnalysisLifetime = TimeSpan.FromMinutes(14.5);
 
 	private readonly LogAnalyzer _analyzer = new();
 
-	internal async Task<bool> TryHandleMessageAsync(SocketUserMessage message)
+	internal async Task AnalyzeMessageAsync(SocketSlashCommand context, IMessage targetMessage)
 	{
-		if (!Program.SupportChannelIds.Contains(message.Channel.Id))
-		{
-			return false;
-		}
-
+		LogAnalysisResponse response;
 		try
 		{
-			var input = await TryExtractLogInputAsync(message.Attachments);
-			if (input == null)
-			{
-				return false;
-			}
-
-			if (!string.IsNullOrWhiteSpace(input.ErrorMessage))
-			{
-				await SendReplyAsync(message, BuildStatusEmbed(input.SourceName, input.ErrorMessage, Color.Orange));
-				return true;
-			}
-
-			if (!ContainsException(input.Text))
-			{
-				return false;
-			}
-
-			var pageSet = BuildPages(input);
-			if (pageSet == null)
-			{
-				return false;
-			}
-
-			var sentMessage = await message.Channel.SendMessageAsync(
-				embed: pageSet.Embeds[0],
-				components: BuildPaginationComponents(0, pageSet.Embeds.Count),
-				messageReference: new MessageReference(message.Id),
-				allowedMentions: AllowedMentions.None);
-
-			if (pageSet.Embeds.Count > 1)
-			{
-				PaginationStates[sentMessage.Id] = new PaginationState(pageSet.Embeds);
-			}
-
-			return true;
+			response = await BuildResponseAsync(targetMessage);
 		}
 		catch (Exception ex)
 		{
 			Console.WriteLine($"Support log analysis failed: {ex}");
-			await SendReplyAsync(
-				message,
-				BuildStatusEmbed("discord-log", "I hit an error while analyzing that log. Please try again or let a helper review it manually.", Color.Orange));
-			return true;
+			response = LogAnalysisResponse.FromStatus(BuildStatusEmbed(
+				$"message {targetMessage.Id}",
+				"I hit an error while analyzing that log. Please try again or let a helper review it manually.",
+				Color.Orange));
 		}
+
+		await SendResponseAsync(context, response);
 	}
 
 	internal async Task<bool> TryHandlePaginationAsync(SocketMessageComponent component)
@@ -99,22 +64,16 @@ internal sealed class SupportLogAnalyzer
 			return true;
 		}
 
-		if (!PaginationStates.TryGetValue(component.Message.Id, out var state))
+		if (!Sessions.TryGetValue(component.Message.Id, out var state) || state.ExpiresAt <= DateTimeOffset.UtcNow)
 		{
-			try
-			{
-				await component.ModifyOriginalResponseAsync(message =>
-				{
-					message.Content = "That log analysis is no longer interactive.";
-					message.Embeds = null;
-					message.Components = null;
-				});
-			}
-			catch (Exception ex)
-			{
-				Console.WriteLine($"Failed to remove stale pagination state for message {component.Message?.Id}: {ex.Message}");
-			}
+			Sessions.TryRemove(component.Message.Id, out _);
+			await TryShowExpiredResponseAsync(component);
+			return true;
+		}
 
+		if (component.User.Id != state.OwnerUserId)
+		{
+			await component.FollowupAsync("Only the user who ran this analysis can change pages.", ephemeral: true);
 			return true;
 		}
 
@@ -135,6 +94,7 @@ internal sealed class SupportLogAnalyzer
 		{
 			await component.ModifyOriginalResponseAsync(properties =>
 			{
+				properties.Content = null;
 				properties.Embed = state.Embeds[state.CurrentPage];
 				properties.Components = BuildPaginationComponents(state.CurrentPage, state.Embeds.Count);
 			});
@@ -147,9 +107,45 @@ internal sealed class SupportLogAnalyzer
 		return true;
 	}
 
-	private async Task<LogInput> TryExtractLogInputAsync(IReadOnlyCollection<Attachment> attachments)
+	private async Task<LogAnalysisResponse> BuildResponseAsync(IMessage message)
 	{
-		foreach (var attachment in attachments)
+		var input = await TryExtractLogInputAsync(message);
+		if (input == null)
+		{
+			return LogAnalysisResponse.FromStatus(BuildStatusEmbed(
+				$"message {message.Id}",
+				"I couldn't find a supported `.log` or `.txt` attachment on that message.",
+				Color.Orange));
+		}
+
+		if (!string.IsNullOrWhiteSpace(input.ErrorMessage))
+		{
+			return LogAnalysisResponse.FromStatus(BuildStatusEmbed(input.SourceName, input.ErrorMessage, Color.Orange));
+		}
+
+		if (!ContainsException(input.Text))
+		{
+			return LogAnalysisResponse.FromStatus(BuildStatusEmbed(
+				input.SourceName,
+				"I couldn't find an exception in that log, so there isn't anything to analyze automatically.",
+				Color.Orange));
+		}
+
+		var pageSet = BuildPages(input);
+		if (pageSet == null)
+		{
+			return LogAnalysisResponse.FromStatus(BuildStatusEmbed(
+				input.SourceName,
+				"I couldn't identify any actionable issue groups in that log.",
+				Color.Blue));
+		}
+
+		return new LogAnalysisResponse(pageSet.Embeds);
+	}
+
+	private async Task<LogInput> TryExtractLogInputAsync(IMessage message)
+	{
+		foreach (var attachment in message.Attachments)
 		{
 			if (!HasSupportedExtension(attachment.Filename))
 			{
@@ -169,6 +165,68 @@ internal sealed class SupportLogAnalyzer
 		}
 
 		return null;
+	}
+
+	private async Task SendResponseAsync(SocketSlashCommand context, LogAnalysisResponse response)
+	{
+		await context.ModifyOriginalResponseAsync(properties =>
+		{
+			properties.Content = null;
+			properties.Embed = response.Embeds[0];
+			properties.Components = BuildPaginationComponents(0, response.Embeds.Count);
+		});
+
+		var responseMessage = await context.GetOriginalResponseAsync();
+		var expiresAt = DateTimeOffset.UtcNow.Add(AnalysisLifetime);
+		if (response.Embeds.Count > 1)
+		{
+			Sessions[responseMessage.Id] = new PaginationStates(response.Embeds, context.User.Id, expiresAt);
+		}
+
+		ScheduleResponseCleanup(context, responseMessage.Id, expiresAt);
+	}
+
+	private void ScheduleResponseCleanup(SocketSlashCommand context, ulong responseMessageId, DateTimeOffset expiresAt)
+	{
+		Program.RunBackgroundTask(nameof(ScheduleResponseCleanup), async () =>
+		{
+			var delay = expiresAt - DateTimeOffset.UtcNow;
+			if (delay > TimeSpan.Zero)
+			{
+				await Task.Delay(delay);
+			}
+
+			Sessions.TryRemove(responseMessageId, out _);
+
+			try
+			{
+				await context.DeleteOriginalResponseAsync();
+			}
+			catch (Exception ex)
+			{
+				Console.WriteLine($"[SupportLogAnalyzer] Failed to delete expired analysis response {responseMessageId}: {ex.Message}");
+			}
+		});
+	}
+
+	private static async Task TryShowExpiredResponseAsync(SocketMessageComponent component)
+	{
+		try
+		{
+			await component.ModifyOriginalResponseAsync(properties =>
+			{
+				properties.Content = null;
+				properties.Embed = BuildStatusEmbed(
+					"discord-log",
+					"This log analysis expired. Run `/analyze message` again if you still need it.",
+					Color.DarkGrey);
+				properties.Components = null;
+			});
+		}
+		catch (Exception ex)
+		{
+			Console.WriteLine($"[SupportLogAnalyzer] Failed to show expired state for message {component.Message?.Id}: {ex.Message}");
+		}
 	}
 
 	private PageSet BuildPages(LogInput input)
@@ -354,14 +412,6 @@ internal sealed class SupportLogAnalyzer
 			.Build();
 	}
 
-	private static async Task SendReplyAsync(SocketUserMessage message, Embed embed)
-	{
-		await message.Channel.SendMessageAsync(
-			embed: embed,
-			messageReference: new MessageReference(message.Id),
-			allowedMentions: AllowedMentions.None);
-	}
-
 	private static Embed BuildStatusEmbed(string sourceName, string message, Color color)
 	{
 		return new EmbedBuilder()
@@ -430,16 +480,28 @@ internal sealed class SupportLogAnalyzer
 
 	private sealed record AdviceGroupPageItem(DiagnosisAdviceGroupDto Group, IReadOnlyList<DiagnosisDto> Diagnoses);
 
-	private sealed class PaginationState
+	private sealed class PaginationStates
 	{
-		internal PaginationState(IReadOnlyList<Embed> embeds)
+		internal PaginationStates(IReadOnlyList<Embed> embeds, ulong ownerUserId, DateTimeOffset expiresAt)
 		{
 			Embeds = embeds;
+			OwnerUserId = ownerUserId;
+			ExpiresAt = expiresAt;
 		}
 
 		internal object SyncRoot { get; } = new();
 		internal IReadOnlyList<Embed> Embeds { get; }
+		internal ulong OwnerUserId { get; }
+		internal DateTimeOffset ExpiresAt { get; }
 		internal int CurrentPage { get; set; }
+	}
+
+	private sealed record LogAnalysisResponse(IReadOnlyList<Embed> Embeds)
+	{
+		internal static LogAnalysisResponse FromStatus(Embed embed)
+		{
+			return new LogAnalysisResponse([embed]);
+		}
 	}
 
 	private sealed record PageSet(IReadOnlyList<Embed> Embeds);

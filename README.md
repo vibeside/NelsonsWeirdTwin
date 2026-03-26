@@ -1,8 +1,15 @@
 Simple discord bot with auto responses to common phrases using modals, events, and string checking.
 
-Automatic log analysis defaults to the S1 Modding #support channel (`1354832385128271922`).
+## Support Log Analysis
 
-Set `SUPPORT_CHANNEL_IDS` to a comma-separated list of Discord channel IDs to override that default and control where automatic log analysis replies run for `.log`, `.txt`, or pasted error logs.
+- Log analysis is opt-in through `/analyze message target:<message-id-or-link>`.
+- The response is ephemeral, keeps the paginated embed flow, and is cleaned up after roughly 15 minutes.
+- `/analyze settings list`
+- `/analyze settings add-channel channel:<channel>`
+- `/analyze settings remove-channel channel:<channel>`
+- Settings are stored in `support-log-settings.json`.
+- On first run, if `support-log-settings.json` does not exist, it is seeded from `SUPPORT_CHANNEL_IDS`.
+- If `SUPPORT_CHANNEL_IDS` is not set on first run, the bot seeds the default production support channel (`1354832385128271922`).
 
 ## ErrorAnalyzer.Core dependency
 
