@@ -7,7 +7,7 @@
 	<GenerateAssemblyInfo>false</GenerateAssemblyInfo>
 	<Configurations>ProdBot;TestBot</Configurations>
 	<UseLocalErrorAnalyzerCore Condition="'$(UseLocalErrorAnalyzerCore)' == ''">false</UseLocalErrorAnalyzerCore>
-	<ErrorAnalyzerCoreVersion Condition="'$(ErrorAnalyzerCoreVersion)' == ''">*</ErrorAnalyzerCoreVersion>
+	<ErrorAnalyzerCoreVersion Condition="'$(ErrorAnalyzerCoreVersion)' == ''">0.1.2</ErrorAnalyzerCoreVersion>
 	<ErrorAnalyzerCoreProjectPath Condition="'$(ErrorAnalyzerCoreProjectPath)' == ''">..\ErrorAnalyzer\src\ErrorAnalyzer.Core\ErrorAnalyzer.Core.csproj</ErrorAnalyzerCoreProjectPath>
   </PropertyGroup>
 	<PropertyGroup Condition="'$(Configuration)' == 'ProdBot'">
